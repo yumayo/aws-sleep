@@ -3,6 +3,8 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import { getHealth } from './controllers/health-controller'
 import { SchedulerController } from './controllers/scheduler-controller'
+import { createScheduleConfig } from './config/scheduler-config'
+import { EcsService } from './services/ecs-service'
 
 const fastify = Fastify({
   logger: true
@@ -18,7 +20,9 @@ fastify.get('/api/health', getHealth)
 let schedulerController: SchedulerController | null = null
 
 try {
-  schedulerController = new SchedulerController()
+  const ecsService = new EcsService()
+  const config = createScheduleConfig()
+  schedulerController = new SchedulerController(ecsService, config)
   schedulerController.startScheduler()
   console.log('ECS scheduler initialized successfully')
 } catch (error) {
@@ -57,6 +61,7 @@ if (schedulerController) {
       return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
     }
   })
+
 
   // 遅延停止申請
   fastify.post('/api/ecs/delay-stop', async (request, reply) => {
