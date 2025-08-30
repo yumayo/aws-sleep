@@ -57,6 +57,50 @@ if (schedulerController) {
       return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
     }
   })
+
+  // 遅延停止申請
+  fastify.post('/api/ecs/delay-stop', async (request, reply) => {
+    try {
+      const body = request.body as { requester?: string }
+      const result = schedulerController!.requestDelayedStop(body?.requester)
+      
+      if (!result.success) {
+        reply.code(409) // Conflict
+      }
+      
+      return result
+    } catch (error) {
+      reply.code(500)
+      return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  // 遅延停止申請の取消
+  fastify.delete('/api/ecs/delay-stop', async (request, reply) => {
+    try {
+      const result = schedulerController!.cancelDelayedStop()
+      
+      if (!result.success) {
+        reply.code(404) // Not Found
+      }
+      
+      return result
+    } catch (error) {
+      reply.code(500)
+      return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  // 遅延停止申請状況確認
+  fastify.get('/api/ecs/delay-status', async (request, reply) => {
+    try {
+      const status = schedulerController!.getDelayedStopStatus()
+      return { status: 'success', ...status }
+    } catch (error) {
+      reply.code(500)
+      return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
 }
 
 const start = async () => {
