@@ -1,0 +1,39 @@
+services:
+
+  ai:
+    build:
+      context: .
+      dockerfile: docker/ai/Dockerfile
+    tty: true
+    stop_grace_period: 0s
+    # iptablesでip制限を行うため
+    cap_add:
+        - NET_ADMIN
+        - NET_RAW
+    volumes:
+      - ./:/app
+      - type: tmpfs
+        target: /app/.claude.local
+        tmpfs:
+          size: 0
+
+      - type: bind
+        source: .claude.local/.claude
+        target: /home/ubuntu/.claude
+        bind:
+          create_host_path: false
+
+      - type: bind
+        source: .claude.local/.claude.json
+        target: /home/ubuntu/.claude.json
+        bind:
+          create_host_path: false
+
+  script:
+    build:
+      context: .
+      dockerfile: docker/script/Dockerfile
+    volumes:
+      - ./:/app
+    tty: true
+    stop_grace_period: 0s
