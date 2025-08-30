@@ -59,9 +59,10 @@ services:
       context: .
       dockerfile: docker/api/Dockerfile
     volumes:
-      - ./app/web:/app
+      - ./app/api:/app
     expose:
-      - "3001"
+      - "5173"
+      - "3000"
     env_file:
       - env/.env
     user: ubuntu
