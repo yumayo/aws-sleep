@@ -1,16 +1,22 @@
+import { isHoliday } from 'japanese-holidays'
 import { EcsService } from '../services/ecs-service'
-import { ScheduleConfig, ScheduleAction } from '../types/scheduler-types'
-import { calculateScheduleActions } from '../lib/schedule-calculator'
+import { ScheduleConfig, ScheduleAction, DelayedStopData } from '../types/scheduler-types'
+import { SchedulerController } from '../controllers/scheduler-controller'
 
 export class Scheduler {
   private ecsService: EcsService
   private config: ScheduleConfig
+  private schedulerController: SchedulerController | null = null
   private intervalId: NodeJS.Timeout | null = null
   private lastExecutionTime: Date | null = null
 
   constructor(ecsService: EcsService, config: ScheduleConfig) {
     this.ecsService = ecsService
     this.config = config
+  }
+
+  setSchedulerController(schedulerController: SchedulerController): void {
+    this.schedulerController = schedulerController
   }
 
   startScheduler(): void {
@@ -28,7 +34,8 @@ export class Scheduler {
         const startTime = this.lastExecutionTime || now
         
         // 前回実行時刻から現在時刻までの範囲で実行
-        await this.update(startTime, now)
+        const delayedStopData = this.schedulerController?.getCurrentDelayedStopData() || null
+        await this.update(startTime, now, delayedStopData)
         
         // 実行完了時刻を更新
         this.lastExecutionTime = now
@@ -51,13 +58,88 @@ export class Scheduler {
     }
   }
 
-  async update(startTime: Date, endTime: Date, delayedStopData: any = null): Promise<{ executed: ScheduleAction[], errors: string[] }> {
+  private isWorkingDay = (date: Date): boolean => {
+    const dayOfWeek = date.getDay()
+    
+    // 土日は休日
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return false
+    }
+    
+    // 祝日は休日
+    if (isHoliday(date)) {
+      return false
+    }
+    
+    return true
+  }
+
+  private calculateScheduleActions = (
+    startTime: Date,
+    endTime: Date,
+    delayedStop: DelayedStopData | null = null
+  ): ScheduleAction[] => {
+    const actions: ScheduleAction[] = []
+    const current = new Date(startTime)
+
+    while (current <= endTime) {
+      const hour = current.getHours()
+      const isWorking = this.isWorkingDay(current)
+      
+      // 遅延停止がある場合の処理（未来の日付のみ）
+      if (delayedStop && 
+          delayedStop.scheduledTime.getTime() >= startTime.getTime() &&
+          current.getTime() <= delayedStop.scheduledTime.getTime() && 
+          delayedStop.scheduledTime.getTime() < current.getTime() + 60 * 1000) {
+        actions.push({
+          type: 'stop',
+          time: new Date(delayedStop.scheduledTime),
+          reason: `Delayed stop request by ${delayedStop.requester || 'anonymous'}`
+        })
+      }
+      // 平日の通常スケジュール
+      else if (isWorking) {
+        if (hour === 9 && current.getMinutes() === 0) {
+          // 遅延停止申請がある場合はスキップしない（通常起動は行う）
+          actions.push({
+            type: 'start',
+            time: new Date(current),
+            reason: 'Working day start (9:00)'
+          })
+        } else if (hour === 21 && current.getMinutes() === 0) {
+          // 遅延停止申請がある場合は通常停止をスキップ
+          if (!delayedStop) {
+            actions.push({
+              type: 'stop',
+              time: new Date(current),
+              reason: 'Working day end (21:00)'
+            })
+          }
+        }
+      }
+      // 休日の停止スケジュール
+      else if (hour === 21 && current.getMinutes() === 0) {
+        actions.push({
+          type: 'stop',
+          time: new Date(current),
+          reason: 'Holiday/weekend stop (21:00)'
+        })
+      }
+      
+      // 1分進める
+      current.setTime(current.getTime() + 60 * 1000)
+    }
+    
+    return actions
+  }
+
+  async update(startTime: Date, endTime: Date, delayedStopData: DelayedStopData | null = null): Promise<{ executed: ScheduleAction[], errors: string[] }> {
     console.log('Calculating schedule actions...')
     console.log(`Target: ${this.config.clusterName}/${this.config.serviceName}`)
     console.log(`Normal desired count: ${this.config.normalDesiredCount}`)
     console.log(`Time range: ${startTime.toISOString()} - ${endTime.toISOString()}`)
 
-    const actions = calculateScheduleActions(startTime, endTime, delayedStopData)
+    const actions = this.calculateScheduleActions(startTime, endTime, delayedStopData)
     const executed: ScheduleAction[] = []
     const errors: string[] = []
 

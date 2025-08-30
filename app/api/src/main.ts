@@ -5,6 +5,7 @@ import { getHealth } from './controllers/health-controller'
 import { SchedulerController } from './controllers/scheduler-controller'
 import { createScheduleConfig } from './config/scheduler-config'
 import { EcsService } from './services/ecs-service'
+import { Scheduler } from './models/scheduler'
 
 const fastify = Fastify({
   logger: true
@@ -16,25 +17,34 @@ fastify.register(cors, {
 
 fastify.get('/api/health', getHealth)
 
-// ECSスケジューラーの初期化
-let schedulerController: SchedulerController | null = null
+// グローバル変数
+let ecsService: EcsService
+let config: any
+let scheduler: Scheduler
+let schedulerController: SchedulerController
 
-try {
-  const ecsService = new EcsService()
-  const config = createScheduleConfig()
-  schedulerController = new SchedulerController(ecsService, config)
-  schedulerController.startScheduler()
+// 初期化関数
+const initializeServices = async () => {
+  // ECSスケジューラーの初期化
+  ecsService = new EcsService()
+  config = createScheduleConfig()
+  scheduler = new Scheduler(ecsService, config)
+  schedulerController = new SchedulerController()
+
+  // コントローラーの初期化（DelayedStopDataの読み込みを含む）
+  await schedulerController.initialize()
+
+  // SchedulerにSchedulerControllerを設定
+  scheduler.setSchedulerController(schedulerController)
+
+  scheduler.startScheduler()
   console.log('ECS scheduler initialized successfully')
-} catch (error) {
-  console.error('Failed to initialize ECS scheduler:', error)
-  console.log('Server will start without ECS scheduling functionality')
 }
 
 // テスト用エンドポイント
-if (schedulerController) {
-  fastify.get('/api/ecs/status', async (request, reply) => {
+  fastify.get('/api/ecs/status', async (_request, reply) => {
     try {
-      const desiredCount = await schedulerController!.getServiceStatus()
+      const desiredCount = await ecsService.getServiceDesiredCount(config.clusterName, config.serviceName)
       return { status: 'success', desiredCount }
     } catch (error) {
       reply.code(500)
@@ -42,9 +52,10 @@ if (schedulerController) {
     }
   })
 
-  fastify.post('/api/ecs/stop', async (request, reply) => {
+  fastify.post('/api/ecs/stop', async (_request, reply) => {
     try {
-      await schedulerController!.testStopService()
+      console.log('Manual test: Stopping ECS service')
+      await ecsService.stopService(config.clusterName, config.serviceName)
       return { status: 'success', message: 'ECS service stop requested' }
     } catch (error) {
       reply.code(500)
@@ -52,9 +63,10 @@ if (schedulerController) {
     }
   })
 
-  fastify.post('/api/ecs/start', async (request, reply) => {
+  fastify.post('/api/ecs/start', async (_request, reply) => {
     try {
-      await schedulerController!.testStartService()
+      console.log('Manual test: Starting ECS service')
+      await ecsService.startService(config.clusterName, config.serviceName, config.normalDesiredCount)
       return { status: 'success', message: 'ECS service start requested' }
     } catch (error) {
       reply.code(500)
@@ -64,26 +76,26 @@ if (schedulerController) {
 
 
   // 遅延停止申請
-  fastify.post('/api/ecs/delay-stop', async (request, reply) => {
+  fastify.post('/api/ecs/delay-stop', async (request, _reply) => {
     try {
       const body = request.body as { requester?: string }
-      const result = schedulerController!.requestDelayedStop(body?.requester)
+      const result = await schedulerController.requestDelayedStop(body?.requester)
       
       if (!result.success) {
-        reply.code(409) // Conflict
+        _reply.code(409) // Conflict
       }
       
       return result
     } catch (error) {
-      reply.code(500)
+      _reply.code(500)
       return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
     }
   })
 
   // 遅延停止申請の取消
-  fastify.delete('/api/ecs/delay-stop', async (request, reply) => {
+  fastify.delete('/api/ecs/delay-stop', async (_request, reply) => {
     try {
-      const result = schedulerController!.cancelDelayedStop()
+      const result = await schedulerController.cancelDelayedStop()
       
       if (!result.success) {
         reply.code(404) // Not Found
@@ -97,19 +109,19 @@ if (schedulerController) {
   })
 
   // 遅延停止申請状況確認
-  fastify.get('/api/ecs/delay-status', async (request, reply) => {
+  fastify.get('/api/ecs/delay-status', async (_request, reply) => {
     try {
-      const status = schedulerController!.getDelayedStopStatus()
+      const status = schedulerController.getDelayedStopStatus()
       return { status: 'success', ...status }
     } catch (error) {
       reply.code(500)
       return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
     }
   })
-}
 
 const start = async () => {
   try {
+    await initializeServices()
     await fastify.listen({ port: 3000, host: '0.0.0.0' })
     console.log('Server listening on port 3000')
   } catch (err) {

@@ -1,44 +1,30 @@
-import { EcsService } from '../services/ecs-service'
-import { ScheduleConfig, DelayedStopData } from '../types/scheduler-types'
-import { Scheduler } from '../models/scheduler'
+import { DelayedStopData } from '../types/scheduler-types'
+import { DelayedStopStorage } from '../services/delayed-stop-storage'
 
 export class SchedulerController {
-  private scheduler: Scheduler
+  private delayedStopStorage: DelayedStopStorage
   private delayedStopData: DelayedStopData | null = null
-  private ecsService: EcsService
-  private config: ScheduleConfig
 
-  constructor(ecsService: EcsService, config: ScheduleConfig) {
-    this.ecsService = ecsService
-    this.config = config
-    this.scheduler = new Scheduler(ecsService, config)
+  constructor(dataDir?: string) {
+    this.delayedStopStorage = new DelayedStopStorage(dataDir)
   }
 
-  startScheduler(): void {
-    this.scheduler.startScheduler()
+  async initialize(): Promise<void> {
+    this.delayedStopData = await this.delayedStopStorage.load()
+    if (this.delayedStopData) {
+      console.log('Loaded delayed stop data:', this.delayedStopData)
+    }
   }
-
-  stopScheduler(): void {
-    this.scheduler.stopScheduler()
-  }
-
-  // 手動でのテスト用メソッド
-  async testStopService(): Promise<void> {
-    console.log('Manual test: Stopping ECS service')
-    await this.ecsService.stopService(this.config.clusterName, this.config.serviceName)
-  }
-
-  async testStartService(): Promise<void> {
-    console.log('Manual test: Starting ECS service')
-    await this.ecsService.startService(this.config.clusterName, this.config.serviceName, this.config.normalDesiredCount)
-  }
-
-  async getServiceStatus(): Promise<number> {
-    return await this.ecsService.getServiceDesiredCount(this.config.clusterName, this.config.serviceName)
-  }
-
   // 遅延停止申請
-  requestDelayedStop(requester?: string): { success: boolean, message: string, scheduledTime?: Date, previousRequest?: { scheduledTime: Date, requester?: string } } {
+  async requestDelayedStop(
+    requester?: string
+  ): Promise<{ 
+    success: boolean, 
+    message: string, 
+    scheduledTime?: Date, 
+    previousRequest?: { scheduledTime: Date, requester?: string },
+    newDelayedStopData?: DelayedStopData | null
+  }> {
     const now = new Date()
     const hour = now.getHours()
     
@@ -64,11 +50,16 @@ export class SchedulerController {
 
     const scheduledTime = new Date(now.getTime() + 60 * 60 * 1000) // 1時間後
 
-    this.delayedStopData = {
+    const newDelayedStopData: DelayedStopData = {
       requestTime: now,
       scheduledTime,
       requester
     }
+
+    // データを保存
+    this.delayedStopData = newDelayedStopData
+    await this.delayedStopStorage.save(newDelayedStopData)
+    console.log('Saved delayed stop data:', newDelayedStopData)
 
     const logMessage = previousRequest 
       ? `New delayed stop scheduled for ${scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} by ${requester || 'anonymous'} (replaced previous request)`
@@ -84,12 +75,17 @@ export class SchedulerController {
       success: true,
       message: responseMessage,
       scheduledTime,
-      previousRequest
+      previousRequest,
+      newDelayedStopData
     }
   }
 
   // 遅延停止申請の取消
-  cancelDelayedStop(): { success: boolean, message: string } {
+  async cancelDelayedStop(): Promise<{ 
+    success: boolean, 
+    message: string,
+    newDelayedStopData?: DelayedStopData | null
+  }> {
     if (!this.delayedStopData) {
       return {
         success: false,
@@ -98,18 +94,28 @@ export class SchedulerController {
     }
 
     const scheduledTime = this.delayedStopData.scheduledTime
+
+    // データをクリア
     this.delayedStopData = null
+    await this.delayedStopStorage.clear()
+    console.log('Cleared delayed stop data')
 
     console.log(`Delayed stop canceled that was scheduled for ${scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`)
 
     return {
       success: true,
-      message: 'Delayed stop request canceled successfully'
+      message: 'Delayed stop request canceled successfully',
+      newDelayedStopData: null
     }
   }
 
   // 遅延停止申請状況を取得
-  getDelayedStopStatus(): { hasRequest: boolean, requestTime?: Date, scheduledTime?: Date, requester?: string } {
+  getDelayedStopStatus(): { 
+    hasRequest: boolean, 
+    requestTime?: Date, 
+    scheduledTime?: Date, 
+    requester?: string 
+  } {
     if (!this.delayedStopData) {
       return { hasRequest: false }
     }
@@ -120,5 +126,10 @@ export class SchedulerController {
       scheduledTime: this.delayedStopData.scheduledTime,
       requester: this.delayedStopData.requester
     }
+  }
+
+  // 現在のDelayedStopDataを取得（Schedulerから使用）
+  getCurrentDelayedStopData(): DelayedStopData | null {
+    return this.delayedStopData
   }
 }
