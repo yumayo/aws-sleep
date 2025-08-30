@@ -16,6 +16,10 @@ services:
         target: /app/.claude.local
         tmpfs:
           size: 0
+      - type: tmpfs
+        target: /app/env
+        tmpfs:
+          size: 0
 
       - type: bind
         source: .claude.local/.claude
@@ -49,3 +53,19 @@ services:
     user: ubuntu
     tty: true
     stop_grace_period: 0s
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    volumes:
+      - ./app/web:/app
+    expose:
+      - "3001"
+    env_file:
+      - env/.env
+    user: ubuntu
+    tty: true
+    stop_grace_period: 0s
+
+    
