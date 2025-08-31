@@ -1,6 +1,7 @@
 import { DelayedStopData } from '../types/scheduler-types'
 import { DelayedStopStorage } from '../services/delayed-stop-storage'
 import { ScheduleConfigStorage } from '../models/schedule-config-storage'
+import { Scheduler } from '../models/scheduler'
 
 export class SchedulerController {
   private readonly delayedStopStorage: DelayedStopStorage
@@ -25,7 +26,7 @@ export class SchedulerController {
     const hour = now.getHours()
     
     // 停止期間中かどうかをconfigから判定
-    if (!this.configStorage.isInStopPeriod(hour, config)) {
+    if (!Scheduler.isInStopPeriod(hour, config)) {
       const { startHour, stopHour, delayedHours } = config.schedule
       const validationStart = startHour - delayedHours
       const validationStop = stopHour - delayedHours
