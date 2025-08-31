@@ -3,17 +3,9 @@ import { DelayedStopStorage } from '../services/delayed-stop-storage'
 
 export class SchedulerController {
   private delayedStopStorage: DelayedStopStorage
-  private delayedStopData: DelayedStopData | null = null
 
-  constructor(dataDir?: string) {
-    this.delayedStopStorage = new DelayedStopStorage(dataDir)
-  }
-
-  async initialize(): Promise<void> {
-    this.delayedStopData = await this.delayedStopStorage.load()
-    if (this.delayedStopData) {
-      console.log('Loaded delayed stop data:', this.delayedStopData)
-    }
+  constructor(delayedStopStorage: DelayedStopStorage) {
+    this.delayedStopStorage = delayedStopStorage
   }
   // 遅延停止申請
   async requestDelayedStop(
@@ -38,14 +30,17 @@ export class SchedulerController {
 
     let previousRequest: { scheduledTime: Date, requester?: string } | undefined
 
+    // 既存のデータを読み込み
+    const existingData = await this.delayedStopStorage.load()
+    
     // 既に申請がある場合は自動取消して新申請を受け付け
-    if (this.delayedStopData) {
+    if (existingData) {
       previousRequest = {
-        scheduledTime: this.delayedStopData.scheduledTime,
-        requester: this.delayedStopData.requester
+        scheduledTime: existingData.scheduledTime,
+        requester: existingData.requester
       }
       
-      console.log(`Canceling existing delayed stop request scheduled for ${this.delayedStopData.scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} by ${this.delayedStopData.requester || 'anonymous'}`)
+      console.log(`Canceling existing delayed stop request scheduled for ${existingData.scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} by ${existingData.requester || 'anonymous'}`)
     }
 
     const scheduledTime = new Date(now.getTime() + 60 * 60 * 1000) // 1時間後
@@ -57,7 +52,6 @@ export class SchedulerController {
     }
 
     // データを保存
-    this.delayedStopData = newDelayedStopData
     await this.delayedStopStorage.save(newDelayedStopData)
     console.log('Saved delayed stop data:', newDelayedStopData)
 
@@ -86,17 +80,19 @@ export class SchedulerController {
     message: string,
     newDelayedStopData?: DelayedStopData | null
   }> {
-    if (!this.delayedStopData) {
+    // 現在のデータを読み込み
+    const existingData = await this.delayedStopStorage.load()
+    
+    if (!existingData) {
       return {
         success: false,
         message: 'No delayed stop request to cancel'
       }
     }
 
-    const scheduledTime = this.delayedStopData.scheduledTime
+    const scheduledTime = existingData.scheduledTime
 
     // データをクリア
-    this.delayedStopData = null
     await this.delayedStopStorage.clear()
     console.log('Cleared delayed stop data')
 
@@ -110,26 +106,28 @@ export class SchedulerController {
   }
 
   // 遅延停止申請状況を取得
-  getDelayedStopStatus(): { 
+  async getDelayedStopStatus(): Promise<{ 
     hasRequest: boolean, 
     requestTime?: Date, 
     scheduledTime?: Date, 
     requester?: string 
-  } {
-    if (!this.delayedStopData) {
+  }> {
+    const existingData = await this.delayedStopStorage.load()
+    
+    if (!existingData) {
       return { hasRequest: false }
     }
 
     return {
       hasRequest: true,
-      requestTime: this.delayedStopData.requestTime,
-      scheduledTime: this.delayedStopData.scheduledTime,
-      requester: this.delayedStopData.requester
+      requestTime: existingData.requestTime,
+      scheduledTime: existingData.scheduledTime,
+      requester: existingData.requester
     }
   }
 
   // 現在のDelayedStopDataを取得（Schedulerから使用）
-  getCurrentDelayedStopData(): DelayedStopData | null {
-    return this.delayedStopData
+  async getCurrentDelayedStopData(): Promise<DelayedStopData | null> {
+    return await this.delayedStopStorage.load()
   }
 }

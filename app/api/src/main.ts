@@ -3,6 +3,7 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import { getHealth } from './controllers/health-controller'
 import { SchedulerController } from './controllers/scheduler-controller'
+import { DelayedStopStorage } from './services/delayed-stop-storage'
 import { createScheduleConfig } from './config/scheduler-config'
 import { EcsService } from './services/ecs-service'
 import { Scheduler } from './models/scheduler'
@@ -17,29 +18,20 @@ fastify.register(cors, {
 
 fastify.get('/api/health', getHealth)
 
-// グローバル変数
-let ecsService: EcsService
-let config: any
-let scheduler: Scheduler
-let schedulerController: SchedulerController
+// サービスの初期化
+const ecsService = new EcsService()
+const config = createScheduleConfig()
+const scheduler = new Scheduler(ecsService, config)
 
-// 初期化関数
-const initializeServices = async () => {
-  // ECSスケジューラーの初期化
-  ecsService = new EcsService()
-  config = createScheduleConfig()
-  scheduler = new Scheduler(ecsService, config)
-  schedulerController = new SchedulerController()
+// 依存関係の注入
+const delayedStopStorage = new DelayedStopStorage()
+const schedulerController = new SchedulerController(delayedStopStorage)
 
-  // コントローラーの初期化（DelayedStopDataの読み込みを含む）
-  await schedulerController.initialize()
+// SchedulerにSchedulerControllerを設定
+scheduler.setSchedulerController(schedulerController)
 
-  // SchedulerにSchedulerControllerを設定
-  scheduler.setSchedulerController(schedulerController)
-
-  scheduler.startScheduler()
-  console.log('ECS scheduler initialized successfully')
-}
+scheduler.startScheduler()
+console.log('ECS scheduler initialized successfully')
 
 // テスト用エンドポイント
   fastify.get('/api/ecs/status', async (_request, reply) => {
@@ -111,7 +103,7 @@ const initializeServices = async () => {
   // 遅延停止申請状況確認
   fastify.get('/api/ecs/delay-status', async (_request, reply) => {
     try {
-      const status = schedulerController.getDelayedStopStatus()
+      const status = await schedulerController.getDelayedStopStatus()
       return { status: 'success', ...status }
     } catch (error) {
       reply.code(500)
@@ -121,7 +113,6 @@ const initializeServices = async () => {
 
 const start = async () => {
   try {
-    await initializeServices()
     await fastify.listen({ port: 3000, host: '0.0.0.0' })
     console.log('Server listening on port 3000')
   } catch (err) {
