@@ -12,7 +12,6 @@ export const createScheduleConfig = (): ScheduleConfig => {
   return {
     clusterName,
     serviceName,
-    normalDesiredCount,
-    timezone: 'Asia/Tokyo'
+    normalDesiredCount
   }
 }

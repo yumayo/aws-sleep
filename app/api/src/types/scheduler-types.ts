@@ -8,7 +8,6 @@ export interface ScheduleConfig {
   clusterName: string
   serviceName: string
   normalDesiredCount: number
-  timezone: string
 }
 
 export interface DelayedStopData {
