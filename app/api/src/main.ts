@@ -20,10 +20,10 @@ fastify.register(cors, {
 fastify.get('/api/health', getHealth)
 
 // サービスの初期化
-const ecsService = new EcsService()
+const ecsDesiredCountStorage = new EcsDesiredCountStorage()
+const ecsService = new EcsService(ecsDesiredCountStorage)
 const configStorage = new ScheduleConfigStorage()
 const delayedStopStorage = new DelayedStopStorage()
-const ecsDesiredCountStorage = new EcsDesiredCountStorage()
 const schedulerController = new SchedulerController(delayedStopStorage)
 
 // テスト用エンドポイント
@@ -69,7 +69,7 @@ fastify.post('/api/ecs/start', async (_request, reply) => {
     const config = await configStorage.load()
     await Promise.all(
       config.items.map(ecs => 
-        ecsService.startService(ecs.clusterName, ecs.serviceName, ecs.normalDesiredCount)
+        ecsService.startService(ecs.clusterName, ecs.serviceName)
       )
     )
     return { status: 'success', message: 'ECS services start requested' }
@@ -127,7 +127,7 @@ fastify.get('/api/ecs/delay-status', async (_request, reply) => {
 const start = async () => {
   try {
     // 依存関係の注入
-    const scheduler = new Scheduler(ecsService, configStorage, delayedStopStorage, ecsDesiredCountStorage)
+    const scheduler = new Scheduler(ecsService, configStorage, delayedStopStorage)
 
     await scheduler.startScheduler()
     console.log('ECS scheduler initialized successfully')

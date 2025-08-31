@@ -1,12 +1,15 @@
 import { ECSClient, UpdateServiceCommand, DescribeServicesCommand } from '@aws-sdk/client-ecs'
+import { EcsDesiredCountStorage } from './ecs-desired-count-storage'
 
 export class EcsService {
   private readonly client: ECSClient
+  private readonly ecsDesiredCountStorage: EcsDesiredCountStorage
 
-  constructor() {
+  constructor(ecsDesiredCountStorage: EcsDesiredCountStorage) {
     this.client = new ECSClient({
       region: process.env.AWS_REGION || 'ap-northeast-1'
     })
+    this.ecsDesiredCountStorage = ecsDesiredCountStorage
   }
 
   async updateServiceDesiredCount(clusterName: string, serviceName: string, desiredCount: number): Promise<void> {
@@ -48,10 +51,26 @@ export class EcsService {
 
   async stopService(clusterName: string, serviceName: string): Promise<void> {
     console.log(`Stopping ECS service: ${serviceName}`)
+    // 停止前に現在のdesired countを記録
+    const currentDesiredCount = await this.getServiceDesiredCount(clusterName, serviceName)
+    if (currentDesiredCount > 0) {
+      await this.ecsDesiredCountStorage.setDesiredCount(clusterName, serviceName, currentDesiredCount)
+    }
     await this.updateServiceDesiredCount(clusterName, serviceName, 0)
   }
 
-  async startService(clusterName: string, serviceName: string, desiredCount: number = 1): Promise<void> {
+  async startService(clusterName: string, serviceName: string): Promise<void> {
+    // EcsDesiredCountStorageから保存された値を使用
+    const desiredCount = await this.ecsDesiredCountStorage.getDesiredCount(clusterName, serviceName)
+    if (desiredCount === null) {
+      console.log(`Skipping start for ${clusterName}/${serviceName}: no desired count available`)
+      return
+    }
+    console.log(`Starting ECS service: ${serviceName} with ${desiredCount} tasks`)
+    await this.updateServiceDesiredCount(clusterName, serviceName, desiredCount)
+  }
+
+  async startServiceWithCount(clusterName: string, serviceName: string, desiredCount: number): Promise<void> {
     console.log(`Starting ECS service: ${serviceName} with ${desiredCount} tasks`)
     await this.updateServiceDesiredCount(clusterName, serviceName, desiredCount)
   }
