@@ -1,7 +1,7 @@
 import { ECSClient, UpdateServiceCommand, DescribeServicesCommand } from '@aws-sdk/client-ecs'
 
 export class EcsService {
-  private client: ECSClient
+  private readonly client: ECSClient
 
   constructor() {
     this.client = new ECSClient({

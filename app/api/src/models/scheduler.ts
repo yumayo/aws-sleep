@@ -4,9 +4,9 @@ import { DelayedStopStorage } from '../services/delayed-stop-storage'
 import { ScheduleConfig, ScheduleAction, DelayedStopData } from '../types/scheduler-types'
 
 export class Scheduler {
-  private ecsService: EcsService
-  private config: ScheduleConfig
-  private delayedStopStorage: DelayedStopStorage
+  private readonly ecsService: EcsService
+  private readonly config: ScheduleConfig
+  private readonly delayedStopStorage: DelayedStopStorage
   private intervalId: NodeJS.Timeout | null = null
   private lastExecutionTime: Date | null = null
 

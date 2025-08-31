@@ -2,7 +2,7 @@ import { DelayedStopData } from '../types/scheduler-types'
 import { DelayedStopStorage } from '../services/delayed-stop-storage'
 
 export class SchedulerController {
-  private delayedStopStorage: DelayedStopStorage
+  private readonly delayedStopStorage: DelayedStopStorage
 
   constructor(delayedStopStorage: DelayedStopStorage) {
     this.delayedStopStorage = delayedStopStorage

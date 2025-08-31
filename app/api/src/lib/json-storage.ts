@@ -2,7 +2,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 
 export class JsonStorage<T> {
-  private filePath: string
+  private readonly filePath: string
 
   constructor(fileName: string, dataDir: string = './data') {
     this.filePath = path.join(dataDir, fileName)
