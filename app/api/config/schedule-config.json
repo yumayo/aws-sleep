@@ -1,0 +1,9 @@
+{
+  "items": [
+    {
+      "clusterName": "example-cluster",
+      "serviceName": "example-service",
+      "normalDesiredCount": 1
+    }
+  ]
+}

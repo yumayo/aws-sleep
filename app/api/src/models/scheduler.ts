@@ -2,23 +2,25 @@ import { isHoliday } from 'japanese-holidays'
 import { EcsService } from '../services/ecs-service'
 import { DelayedStopStorage } from '../services/delayed-stop-storage'
 import { ScheduleConfig, ScheduleConfigEcsItem, ScheduleAction, DelayedStopData } from '../types/scheduler-types'
+import { ScheduleConfigStorage } from '../config/scheduler-config'
 
 export class Scheduler {
   private readonly ecsService: EcsService
-  private readonly config: ScheduleConfig
+  private readonly configStorage: ScheduleConfigStorage
   private readonly delayedStopStorage: DelayedStopStorage
   private intervalId: NodeJS.Timeout | null = null
   private lastExecutionTime: Date | null = null
 
-  constructor(ecsService: EcsService, config: ScheduleConfig, delayedStopStorage: DelayedStopStorage) {
+  constructor(ecsService: EcsService, configStorage: ScheduleConfigStorage, delayedStopStorage: DelayedStopStorage) {
     this.ecsService = ecsService
-    this.config = config
+    this.configStorage = configStorage
     this.delayedStopStorage = delayedStopStorage
   }
 
-  startScheduler(): void {
+  async startScheduler(): Promise<void> {
     console.log('Starting internal scheduler (1-minute intervals)...')
-    this.config.items.forEach(ecs => {
+    const config = await this.configStorage.load()
+    config.items.forEach(ecs => {
       console.log(`Target: ${ecs.clusterName}/${ecs.serviceName}`)
       console.log(`Normal desired count: ${ecs.normalDesiredCount}`)
     })
@@ -136,10 +138,11 @@ export class Scheduler {
     console.log('Calculating schedule actions...')
     console.log(`Time range: ${startTime.toISOString()} - ${endTime.toISOString()}`)
 
+    const config = await this.configStorage.load()
     const allExecuted: ScheduleAction[] = []
     const allErrors: string[] = []
 
-    for (const ecs of this.config.items) {
+    for (const ecs of config.items) {
       const result = await this.updateSingle(ecs, startTime, endTime, delayedStopData)
       allExecuted.push(...result.executed)
       allErrors.push(...result.errors)

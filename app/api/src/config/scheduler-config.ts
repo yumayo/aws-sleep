@@ -1,21 +1,42 @@
+import { JsonStorage } from '../lib/json-storage'
 import { ScheduleConfig } from '../types/scheduler-types'
 
-export const createScheduleConfig = (): ScheduleConfig => {
-  const clusterName = process.env.ECS_CLUSTER_NAME || ''
-  const serviceName = process.env.ECS_SERVICE_NAME || ''
-  const normalDesiredCount = parseInt(process.env.ECS_NORMAL_DESIRED_COUNT || '1')
+export class ScheduleConfigStorage {
+  private readonly storage: JsonStorage<ScheduleConfig>
 
-  if (!clusterName || !serviceName) {
-    throw new Error('ECS_CLUSTER_NAME and ECS_SERVICE_NAME environment variables are required')
+  constructor(configDir?: string) {
+    this.storage = new JsonStorage<ScheduleConfig>('schedule-config.json', configDir || './config')
   }
 
-  return {
-    items: [
-      {
-        clusterName,
-        serviceName,
-        normalDesiredCount
+  async load(): Promise<ScheduleConfig> {
+    const config = await this.storage.load()
+    
+    if (!config) {
+      throw new Error('Schedule config file not found. Please create config/schedule-config.json')
+    }
+    
+    // 設定値の検証
+    if (!config.items || config.items.length === 0) {
+      throw new Error('Schedule config must have at least one item')
+    }
+    
+    for (const item of config.items) {
+      if (!item.clusterName || !item.serviceName) {
+        throw new Error('Each schedule config item must have clusterName and serviceName')
       }
-    ]
+      if (typeof item.normalDesiredCount !== 'number' || item.normalDesiredCount < 0) {
+        throw new Error('normalDesiredCount must be a non-negative number')
+      }
+    }
+    
+    return config
+  }
+
+  async save(config: ScheduleConfig): Promise<void> {
+    await this.storage.save(config)
+  }
+
+  async exists(): Promise<boolean> {
+    return this.storage.exists()
   }
 }

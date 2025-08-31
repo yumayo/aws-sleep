@@ -4,7 +4,7 @@ import cors from '@fastify/cors'
 import { getHealth } from './controllers/health-controller'
 import { SchedulerController } from './controllers/scheduler-controller'
 import { DelayedStopStorage } from './services/delayed-stop-storage'
-import { createScheduleConfig } from './config/scheduler-config'
+import { ScheduleConfigStorage } from './config/scheduler-config'
 import { EcsService } from './services/ecs-service'
 import { Scheduler } from './models/scheduler'
 
@@ -20,19 +20,14 @@ fastify.get('/api/health', getHealth)
 
 // サービスの初期化
 const ecsService = new EcsService()
-const config = createScheduleConfig()
-
-// 依存関係の注入
+const configStorage = new ScheduleConfigStorage()
 const delayedStopStorage = new DelayedStopStorage()
-const scheduler = new Scheduler(ecsService, config, delayedStopStorage)
 const schedulerController = new SchedulerController(delayedStopStorage)
-
-scheduler.startScheduler()
-console.log('ECS scheduler initialized successfully')
 
 // テスト用エンドポイント
 fastify.get('/api/ecs/status', async (_request, reply) => {
   try {
+    const config = await configStorage.load()
     const statusList = await Promise.all(
       config.items.map(async (ecs) => {
         const desiredCount = await ecsService.getServiceDesiredCount(ecs.clusterName, ecs.serviceName)
@@ -53,6 +48,7 @@ fastify.get('/api/ecs/status', async (_request, reply) => {
 fastify.post('/api/ecs/stop', async (_request, reply) => {
   try {
     console.log('Manual test: Stopping ECS services')
+    const config = await configStorage.load()
     await Promise.all(
       config.items.map(ecs => 
         ecsService.stopService(ecs.clusterName, ecs.serviceName)
@@ -68,6 +64,7 @@ fastify.post('/api/ecs/stop', async (_request, reply) => {
 fastify.post('/api/ecs/start', async (_request, reply) => {
   try {
     console.log('Manual test: Starting ECS services')
+    const config = await configStorage.load()
     await Promise.all(
       config.items.map(ecs => 
         ecsService.startService(ecs.clusterName, ecs.serviceName, ecs.normalDesiredCount)
@@ -127,6 +124,12 @@ fastify.get('/api/ecs/delay-status', async (_request, reply) => {
 
 const start = async () => {
   try {
+    // 依存関係の注入
+    const scheduler = new Scheduler(ecsService, configStorage, delayedStopStorage)
+
+    await scheduler.startScheduler()
+    console.log('ECS scheduler initialized successfully')
+
     await fastify.listen({ port: 3000, host: '0.0.0.0' })
     console.log('Server listening on port 3000')
   } catch (err) {
