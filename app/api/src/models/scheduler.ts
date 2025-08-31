@@ -107,19 +107,16 @@ export class Scheduler {
           actions.push({
             type: 'start',
             time: new Date(current),
-            reason: `Working day start (${config.schedule.workingDays.startHour}:00)`
+            reason: `Working day start (${config.schedule.startHour}:00)`
           })
         } else if (scheduleAction === 'stop') {
           // 遅延停止申請がある場合は通常停止をスキップ
           if (!delayedStop || !isWorking) {
-            const stopHour = isWorking ? config.schedule.workingDays.stopHour : config.schedule.holidays.stopHour
-            const reason = isWorking ? 
-              `Working day end (${stopHour}:00)` : 
-              `Holiday/weekend stop (${stopHour}:00)`
+            const stopHour = config.schedule.stopHour
             actions.push({
               type: 'stop',
               time: new Date(current),
-              reason
+              reason: `Working day end (${stopHour}:00)`
             })
           }
         }

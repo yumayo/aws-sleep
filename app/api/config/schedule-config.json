@@ -6,13 +6,8 @@
     }
   ],
   "schedule": {
-    "workingDays": {
-      "startHour": 9,
-      "stopHour": 21
-    },
-    "holidays": {
-      "stopHour": 21
-    },
+    "startHour": 9,
+    "stopHour": 21,
     "delayedHours": 1
   }
 }

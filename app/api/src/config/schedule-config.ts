@@ -31,18 +31,17 @@ export class ScheduleConfigStorage {
       throw new Error('Schedule config must have schedule configuration')
     }
     
-    if (!config.schedule.workingDays || !config.schedule.holidays) {
-      throw new Error('Schedule config must have workingDays and holidays configuration')
+    if (config.schedule.startHour === undefined || config.schedule.stopHour === undefined) {
+      throw new Error('Schedule config must have startHour and stopHour configuration')
     }
     
     if (config.schedule.delayedHours === undefined || config.schedule.delayedHours === null) {
       throw new Error('Schedule config must have delayedHours configuration')
     }
     
-    const { startHour, stopHour, delayedHours } = config.schedule.workingDays
-    const { stopHour: holidayStopHour } = config.schedule.holidays
+    const { startHour, stopHour, delayedHours } = config.schedule
     
-    if (startHour < 0 || startHour > 23 || stopHour < 0 || stopHour > 23 || holidayStopHour < 0 || holidayStopHour > 23) {
+    if (startHour < 0 || startHour > 23 || stopHour < 0 || stopHour > 23) {
       throw new Error('Schedule hours must be between 0 and 23')
     }
     
@@ -69,7 +68,7 @@ export class ScheduleConfigStorage {
    * @returns 停止期間中の場合true
    */
   isInStopPeriod(hour: number, config: ScheduleConfig): boolean {
-    const { startHour, stopHour, delayedHours } = config.schedule.workingDays
+    const { startHour, stopHour, delayedHours } = config.schedule
     
     // 停止期間の判定時間を遅延時間分早める
     const stopValidationHour = stopHour - delayedHours  // 21 - 1 = 20
@@ -91,13 +90,11 @@ export class ScheduleConfigStorage {
     if (minute !== 0) return null
     
     if (isWorkingDay) {
-      const { startHour, stopHour } = config.schedule.workingDays
+      const { startHour, stopHour } = config.schedule
       if (hour === startHour) return 'start'
       if (hour === stopHour) return 'stop'
-    } else {
-      const { stopHour } = config.schedule.holidays
-      if (hour === stopHour) return 'stop'
     }
+    // 休日は何も実行しない（常に停止状態）
     
     return null
   }
