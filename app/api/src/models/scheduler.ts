@@ -2,7 +2,7 @@ import { isHoliday } from 'japanese-holidays'
 import { EcsService } from '../services/ecs-service'
 import { DelayedStopStorage } from '../services/delayed-stop-storage'
 import { ScheduleConfig, ScheduleConfigEcsItem, ScheduleAction, DelayedStopData } from '../types/scheduler-types'
-import { ScheduleConfigStorage } from '../config/scheduler-config'
+import { ScheduleConfigStorage } from '../config/schedule-config'
 
 export class Scheduler {
   private readonly ecsService: EcsService
