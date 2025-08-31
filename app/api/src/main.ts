@@ -21,14 +21,11 @@ fastify.get('/api/health', getHealth)
 // サービスの初期化
 const ecsService = new EcsService()
 const config = createScheduleConfig()
-const scheduler = new Scheduler(ecsService, config)
 
 // 依存関係の注入
 const delayedStopStorage = new DelayedStopStorage()
+const scheduler = new Scheduler(ecsService, config, delayedStopStorage)
 const schedulerController = new SchedulerController(delayedStopStorage)
-
-// SchedulerにSchedulerControllerを設定
-scheduler.setSchedulerController(schedulerController)
 
 scheduler.startScheduler()
 console.log('ECS scheduler initialized successfully')

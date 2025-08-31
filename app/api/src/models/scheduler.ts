@@ -1,22 +1,19 @@
 import { isHoliday } from 'japanese-holidays'
 import { EcsService } from '../services/ecs-service'
+import { DelayedStopStorage } from '../services/delayed-stop-storage'
 import { ScheduleConfig, ScheduleAction, DelayedStopData } from '../types/scheduler-types'
-import { SchedulerController } from '../controllers/scheduler-controller'
 
 export class Scheduler {
   private ecsService: EcsService
   private config: ScheduleConfig
-  private schedulerController: SchedulerController | null = null
+  private delayedStopStorage: DelayedStopStorage
   private intervalId: NodeJS.Timeout | null = null
   private lastExecutionTime: Date | null = null
 
-  constructor(ecsService: EcsService, config: ScheduleConfig) {
+  constructor(ecsService: EcsService, config: ScheduleConfig, delayedStopStorage: DelayedStopStorage) {
     this.ecsService = ecsService
     this.config = config
-  }
-
-  setSchedulerController(schedulerController: SchedulerController): void {
-    this.schedulerController = schedulerController
+    this.delayedStopStorage = delayedStopStorage
   }
 
   startScheduler(): void {
@@ -34,7 +31,7 @@ export class Scheduler {
         const startTime = this.lastExecutionTime || now
         
         // 前回実行時刻から現在時刻までの範囲で実行
-        const delayedStopData = this.schedulerController?.getCurrentDelayedStopData() || null
+        const delayedStopData = await this.delayedStopStorage.load()
         await this.update(startTime, now, delayedStopData)
         
         // 実行完了時刻を更新
