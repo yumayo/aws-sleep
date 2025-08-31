@@ -3,18 +3,21 @@ import { EcsService } from '../services/ecs-service'
 import { DelayedStopStorage } from '../services/delayed-stop-storage'
 import { ScheduleConfig, ScheduleConfigEcsItem, ScheduleAction, DelayedStopData } from '../types/scheduler-types'
 import { ScheduleConfigStorage } from '../config/scheduler-config'
+import { EcsDesiredCountStorage } from '../services/ecs-desired-count-storage'
 
 export class Scheduler {
   private readonly ecsService: EcsService
   private readonly configStorage: ScheduleConfigStorage
   private readonly delayedStopStorage: DelayedStopStorage
+  private readonly ecsDesiredCountStorage: EcsDesiredCountStorage
   private intervalId: NodeJS.Timeout | null = null
   private lastExecutionTime: Date | null = null
 
-  constructor(ecsService: EcsService, configStorage: ScheduleConfigStorage, delayedStopStorage: DelayedStopStorage) {
+  constructor(ecsService: EcsService, configStorage: ScheduleConfigStorage, delayedStopStorage: DelayedStopStorage, ecsDesiredCountStorage: EcsDesiredCountStorage) {
     this.ecsService = ecsService
     this.configStorage = configStorage
     this.delayedStopStorage = delayedStopStorage
+    this.ecsDesiredCountStorage = ecsDesiredCountStorage
   }
 
   async startScheduler(): Promise<void> {
@@ -22,7 +25,6 @@ export class Scheduler {
     const config = await this.configStorage.load()
     config.items.forEach(ecs => {
       console.log(`Target: ${ecs.clusterName}/${ecs.serviceName}`)
-      console.log(`Normal desired count: ${ecs.normalDesiredCount}`)
     })
 
     // 初回実行時刻を記録
@@ -153,7 +155,6 @@ export class Scheduler {
 
   private async updateSingle(ecs: ScheduleConfigEcsItem, startTime: Date, endTime: Date, delayedStopData: DelayedStopData | null = null): Promise<{ executed: ScheduleAction[], errors: string[] }> {
     console.log(`Target: ${ecs.clusterName}/${ecs.serviceName}`)
-    console.log(`Normal desired count: ${ecs.normalDesiredCount}`)
 
     const actions = this.calculateScheduleActions(startTime, endTime, delayedStopData)
     const executed: ScheduleAction[] = []
@@ -164,12 +165,23 @@ export class Scheduler {
         console.log(`Executing ${action.type} at ${action.time.toISOString()}: ${action.reason}`)
         
         if (action.type === 'start') {
+          // EcsDesiredCountStorageから保存された値を使用
+          const desiredCount = await this.ecsDesiredCountStorage.getDesiredCount(ecs.clusterName, ecs.serviceName)
+          if (desiredCount === null) {
+            console.log(`Skipping start for ${ecs.clusterName}/${ecs.serviceName}: no desired count available`)
+            continue
+          }
           await this.ecsService.startService(
             ecs.clusterName,
             ecs.serviceName,
-            ecs.normalDesiredCount
+            desiredCount
           )
         } else if (action.type === 'stop') {
+          // 停止前に現在のdesired countを記録
+          const currentDesiredCount = await this.ecsService.getServiceDesiredCount(ecs.clusterName, ecs.serviceName)
+          if (currentDesiredCount > 0) {
+            await this.ecsDesiredCountStorage.setDesiredCount(ecs.clusterName, ecs.serviceName, currentDesiredCount)
+          }
           await this.ecsService.stopService(
             ecs.clusterName,
             ecs.serviceName

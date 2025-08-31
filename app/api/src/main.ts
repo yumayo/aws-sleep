@@ -6,6 +6,7 @@ import { SchedulerController } from './controllers/scheduler-controller'
 import { DelayedStopStorage } from './services/delayed-stop-storage'
 import { ScheduleConfigStorage } from './config/scheduler-config'
 import { EcsService } from './services/ecs-service'
+import { EcsDesiredCountStorage } from './services/ecs-desired-count-storage'
 import { Scheduler } from './models/scheduler'
 
 const fastify = Fastify({
@@ -22,6 +23,7 @@ fastify.get('/api/health', getHealth)
 const ecsService = new EcsService()
 const configStorage = new ScheduleConfigStorage()
 const delayedStopStorage = new DelayedStopStorage()
+const ecsDesiredCountStorage = new EcsDesiredCountStorage()
 const schedulerController = new SchedulerController(delayedStopStorage)
 
 // テスト用エンドポイント
@@ -125,7 +127,7 @@ fastify.get('/api/ecs/delay-status', async (_request, reply) => {
 const start = async () => {
   try {
     // 依存関係の注入
-    const scheduler = new Scheduler(ecsService, configStorage, delayedStopStorage)
+    const scheduler = new Scheduler(ecsService, configStorage, delayedStopStorage, ecsDesiredCountStorage)
 
     await scheduler.startScheduler()
     console.log('ECS scheduler initialized successfully')

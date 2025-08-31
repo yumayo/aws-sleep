@@ -24,9 +24,6 @@ export class ScheduleConfigStorage {
       if (!item.clusterName || !item.serviceName) {
         throw new Error('Each schedule config item must have clusterName and serviceName')
       }
-      if (typeof item.normalDesiredCount !== 'number' || item.normalDesiredCount < 0) {
-        throw new Error('normalDesiredCount must be a non-negative number')
-      }
     }
     
     return config

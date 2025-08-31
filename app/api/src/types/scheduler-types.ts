@@ -7,7 +7,6 @@ export interface ScheduleAction {
 export interface ScheduleConfigEcsItem {
   clusterName: string
   serviceName: string
-  normalDesiredCount: number
 }
 
 export interface ScheduleConfig {
@@ -18,4 +17,8 @@ export interface DelayedStopData {
   requestTime: Date
   scheduledTime: Date
   requester?: string
+}
+
+export interface EcsDesiredCountData {
+  [key: string]: number // key: "clusterName/serviceName", value: desiredCount
 }
