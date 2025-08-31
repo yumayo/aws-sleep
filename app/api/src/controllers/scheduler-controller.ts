@@ -26,7 +26,7 @@ export class SchedulerController {
     
     // 停止期間中かどうかをconfigから判定
     if (!this.configStorage.isInStopPeriod(hour, config)) {
-      const { startHour, stopHour, delayedHours } = config.schedule.workingDays
+      const { startHour, stopHour, delayedHours } = config.schedule
       const validationStart = startHour - delayedHours
       const validationStop = stopHour - delayedHours
       return {
