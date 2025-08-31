@@ -33,8 +33,17 @@ console.log('ECS scheduler initialized successfully')
 // テスト用エンドポイント
 fastify.get('/api/ecs/status', async (_request, reply) => {
   try {
-    const desiredCount = await ecsService.getServiceDesiredCount(config.clusterName, config.serviceName)
-    return { status: 'success', desiredCount }
+    const statusList = await Promise.all(
+      config.items.map(async (ecs) => {
+        const desiredCount = await ecsService.getServiceDesiredCount(ecs.clusterName, ecs.serviceName)
+        return {
+          clusterName: ecs.clusterName,
+          serviceName: ecs.serviceName,
+          desiredCount
+        }
+      })
+    )
+    return { status: 'success', services: statusList }
   } catch (error) {
     reply.code(500)
     return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
@@ -43,9 +52,13 @@ fastify.get('/api/ecs/status', async (_request, reply) => {
 
 fastify.post('/api/ecs/stop', async (_request, reply) => {
   try {
-    console.log('Manual test: Stopping ECS service')
-    await ecsService.stopService(config.clusterName, config.serviceName)
-    return { status: 'success', message: 'ECS service stop requested' }
+    console.log('Manual test: Stopping ECS services')
+    await Promise.all(
+      config.items.map(ecs => 
+        ecsService.stopService(ecs.clusterName, ecs.serviceName)
+      )
+    )
+    return { status: 'success', message: 'ECS services stop requested' }
   } catch (error) {
     reply.code(500)
     return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
@@ -54,9 +67,13 @@ fastify.post('/api/ecs/stop', async (_request, reply) => {
 
 fastify.post('/api/ecs/start', async (_request, reply) => {
   try {
-    console.log('Manual test: Starting ECS service')
-    await ecsService.startService(config.clusterName, config.serviceName, config.normalDesiredCount)
-    return { status: 'success', message: 'ECS service start requested' }
+    console.log('Manual test: Starting ECS services')
+    await Promise.all(
+      config.items.map(ecs => 
+        ecsService.startService(ecs.clusterName, ecs.serviceName, ecs.normalDesiredCount)
+      )
+    )
+    return { status: 'success', message: 'ECS services start requested' }
   } catch (error) {
     reply.code(500)
     return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }

@@ -10,8 +10,12 @@ export const createScheduleConfig = (): ScheduleConfig => {
   }
 
   return {
-    clusterName,
-    serviceName,
-    normalDesiredCount
+    items: [
+      {
+        clusterName,
+        serviceName,
+        normalDesiredCount
+      }
+    ]
   }
 }

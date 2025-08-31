@@ -1,7 +1,7 @@
 import { isHoliday } from 'japanese-holidays'
 import { EcsService } from '../services/ecs-service'
 import { DelayedStopStorage } from '../services/delayed-stop-storage'
-import { ScheduleConfig, ScheduleAction, DelayedStopData } from '../types/scheduler-types'
+import { ScheduleConfig, ScheduleConfigEcsItem, ScheduleAction, DelayedStopData } from '../types/scheduler-types'
 
 export class Scheduler {
   private readonly ecsService: EcsService
@@ -18,8 +18,10 @@ export class Scheduler {
 
   startScheduler(): void {
     console.log('Starting internal scheduler (1-minute intervals)...')
-    console.log(`Target: ${this.config.clusterName}/${this.config.serviceName}`)
-    console.log(`Normal desired count: ${this.config.normalDesiredCount}`)
+    this.config.items.forEach(ecs => {
+      console.log(`Target: ${ecs.clusterName}/${ecs.serviceName}`)
+      console.log(`Normal desired count: ${ecs.normalDesiredCount}`)
+    })
 
     // 初回実行時刻を記録
     this.lastExecutionTime = new Date()
@@ -132,9 +134,23 @@ export class Scheduler {
 
   async update(startTime: Date, endTime: Date, delayedStopData: DelayedStopData | null = null): Promise<{ executed: ScheduleAction[], errors: string[] }> {
     console.log('Calculating schedule actions...')
-    console.log(`Target: ${this.config.clusterName}/${this.config.serviceName}`)
-    console.log(`Normal desired count: ${this.config.normalDesiredCount}`)
     console.log(`Time range: ${startTime.toISOString()} - ${endTime.toISOString()}`)
+
+    const allExecuted: ScheduleAction[] = []
+    const allErrors: string[] = []
+
+    for (const ecs of this.config.items) {
+      const result = await this.updateSingle(ecs, startTime, endTime, delayedStopData)
+      allExecuted.push(...result.executed)
+      allErrors.push(...result.errors)
+    }
+
+    return { executed: allExecuted, errors: allErrors }
+  }
+
+  private async updateSingle(ecs: ScheduleConfigEcsItem, startTime: Date, endTime: Date, delayedStopData: DelayedStopData | null = null): Promise<{ executed: ScheduleAction[], errors: string[] }> {
+    console.log(`Target: ${ecs.clusterName}/${ecs.serviceName}`)
+    console.log(`Normal desired count: ${ecs.normalDesiredCount}`)
 
     const actions = this.calculateScheduleActions(startTime, endTime, delayedStopData)
     const executed: ScheduleAction[] = []
@@ -146,14 +162,14 @@ export class Scheduler {
         
         if (action.type === 'start') {
           await this.ecsService.startService(
-            this.config.clusterName,
-            this.config.serviceName,
-            this.config.normalDesiredCount
+            ecs.clusterName,
+            ecs.serviceName,
+            ecs.normalDesiredCount
           )
         } else if (action.type === 'stop') {
           await this.ecsService.stopService(
-            this.config.clusterName,
-            this.config.serviceName
+            ecs.clusterName,
+            ecs.serviceName
           )
         } else {
           throw new Error(`Unknown action type: ${action.type}`)

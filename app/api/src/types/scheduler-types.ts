@@ -4,10 +4,14 @@ export interface ScheduleAction {
   reason: string
 }
 
-export interface ScheduleConfig {
+export interface ScheduleConfigEcsItem {
   clusterName: string
   serviceName: string
   normalDesiredCount: number
+}
+
+export interface ScheduleConfig {
+  items: ScheduleConfigEcsItem[]
 }
 
 export interface DelayedStopData {
