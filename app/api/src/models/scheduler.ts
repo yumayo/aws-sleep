@@ -74,16 +74,18 @@ export class Scheduler {
     return true
   }
 
-  private calculateScheduleActions = (
+  private async calculateScheduleActions(
+    config: ScheduleConfig,
     startTime: Date,
     endTime: Date,
     delayedStop: DelayedStopData | null = null
-  ): ScheduleAction[] => {
+  ): Promise<ScheduleAction[]> {
     const actions: ScheduleAction[] = []
     const current = new Date(startTime)
 
     while (current <= endTime) {
       const hour = current.getHours()
+      const minute = current.getMinutes()
       const isWorking = this.isWorkingDay(current)
       
       // 遅延停止がある場合の処理（未来の日付のみ）
@@ -96,34 +98,31 @@ export class Scheduler {
           time: new Date(delayedStop.scheduledTime),
           reason: `Delayed stop request by ${delayedStop.requester || 'anonymous'}`
         })
-      }
-      // 平日の通常スケジュール
-      else if (isWorking) {
-        if (hour === 9 && current.getMinutes() === 0) {
+      } else {
+        // 設定に基づいたスケジュール判定
+        const scheduleAction = this.configStorage.getScheduleAction(hour, minute, config, isWorking)
+        
+        if (scheduleAction === 'start') {
           // 遅延停止申請がある場合はスキップしない（通常起動は行う）
           actions.push({
             type: 'start',
             time: new Date(current),
-            reason: 'Working day start (9:00)'
+            reason: `Working day start (${config.schedule.workingDays.startHour}:00)`
           })
-        } else if (hour === 21 && current.getMinutes() === 0) {
+        } else if (scheduleAction === 'stop') {
           // 遅延停止申請がある場合は通常停止をスキップ
-          if (!delayedStop) {
+          if (!delayedStop || !isWorking) {
+            const stopHour = isWorking ? config.schedule.workingDays.stopHour : config.schedule.holidays.stopHour
+            const reason = isWorking ? 
+              `Working day end (${stopHour}:00)` : 
+              `Holiday/weekend stop (${stopHour}:00)`
             actions.push({
               type: 'stop',
               time: new Date(current),
-              reason: 'Working day end (21:00)'
+              reason
             })
           }
         }
-      }
-      // 休日の停止スケジュール
-      else if (hour === 21 && current.getMinutes() === 0) {
-        actions.push({
-          type: 'stop',
-          time: new Date(current),
-          reason: 'Holiday/weekend stop (21:00)'
-        })
       }
       
       // 1分進める
@@ -142,7 +141,7 @@ export class Scheduler {
     const allErrors: string[] = []
 
     for (const ecs of config.items) {
-      const result = await this.updateSingle(ecs, startTime, endTime, delayedStopData)
+      const result = await this.updateSingle(ecs, config, startTime, endTime, delayedStopData)
       allExecuted.push(...result.executed)
       allErrors.push(...result.errors)
     }
@@ -150,10 +149,10 @@ export class Scheduler {
     return { executed: allExecuted, errors: allErrors }
   }
 
-  private async updateSingle(ecs: ScheduleConfigEcsItem, startTime: Date, endTime: Date, delayedStopData: DelayedStopData | null = null): Promise<{ executed: ScheduleAction[], errors: string[] }> {
+  private async updateSingle(ecs: ScheduleConfigEcsItem, config: ScheduleConfig, startTime: Date, endTime: Date, delayedStopData: DelayedStopData | null = null): Promise<{ executed: ScheduleAction[], errors: string[] }> {
     console.log(`Target: ${ecs.clusterName}/${ecs.serviceName}`)
 
-    const actions = this.calculateScheduleActions(startTime, endTime, delayedStopData)
+    const actions = await this.calculateScheduleActions(config, startTime, endTime, delayedStopData)
     const executed: ScheduleAction[] = []
     const errors: string[] = []
 

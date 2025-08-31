@@ -11,6 +11,16 @@ export interface ScheduleConfigEcsItem {
 
 export interface ScheduleConfig {
   items: ScheduleConfigEcsItem[]
+  schedule: {
+    workingDays: {
+      startHour: number
+      stopHour: number
+    }
+    holidays: {
+      stopHour: number
+    }
+    delayedHours: number
+  }
 }
 
 export interface DelayedStopData {

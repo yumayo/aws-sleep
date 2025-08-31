@@ -24,7 +24,7 @@ const ecsDesiredCountStorage = new EcsDesiredCountStorage()
 const ecsService = new EcsService(ecsDesiredCountStorage)
 const configStorage = new ScheduleConfigStorage()
 const delayedStopStorage = new DelayedStopStorage()
-const schedulerController = new SchedulerController(delayedStopStorage)
+const schedulerController = new SchedulerController(delayedStopStorage, configStorage)
 
 // テスト用エンドポイント
 fastify.get('/api/ecs/status', async (_request, reply) => {

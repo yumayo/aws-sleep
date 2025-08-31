@@ -25,6 +25,30 @@ export class ScheduleConfigStorage {
         throw new Error('Each schedule config item must have clusterName and serviceName')
       }
     }
+
+    // スケジュール設定の検証
+    if (!config.schedule) {
+      throw new Error('Schedule config must have schedule configuration')
+    }
+    
+    if (!config.schedule.workingDays || !config.schedule.holidays) {
+      throw new Error('Schedule config must have workingDays and holidays configuration')
+    }
+    
+    if (config.schedule.delayedHours === undefined || config.schedule.delayedHours === null) {
+      throw new Error('Schedule config must have delayedHours configuration')
+    }
+    
+    const { startHour, stopHour, delayedHours } = config.schedule.workingDays
+    const { stopHour: holidayStopHour } = config.schedule.holidays
+    
+    if (startHour < 0 || startHour > 23 || stopHour < 0 || stopHour > 23 || holidayStopHour < 0 || holidayStopHour > 23) {
+      throw new Error('Schedule hours must be between 0 and 23')
+    }
+    
+    if (delayedHours < 0 || delayedHours > 12) {
+      throw new Error('Delayed hours must be between 0 and 12')
+    }
     
     return config
   }
@@ -35,5 +59,46 @@ export class ScheduleConfigStorage {
 
   async exists(): Promise<boolean> {
     return this.storage.exists()
+  }
+
+  /**
+   * 指定された時間が停止期間中かどうかを判定する
+   * 停止時刻から開始時刻の間は停止期間とする（延長時間を考慮）
+   * @param hour 時間 (0-23)
+   * @param config スケジュール設定
+   * @returns 停止期間中の場合true
+   */
+  isInStopPeriod(hour: number, config: ScheduleConfig): boolean {
+    const { startHour, stopHour, delayedHours } = config.schedule.workingDays
+    
+    // 停止期間の判定時間を遅延時間分早める
+    const stopValidationHour = stopHour - delayedHours  // 21 - 1 = 20
+    const startValidationHour = startHour - delayedHours  // 9 - 1 = 8
+    
+    // 遅延時間を考慮した停止期間の判定
+    return hour >= stopValidationHour || hour <= startValidationHour
+  }
+
+  /**
+   * 指定された時間がスケジュール実行時刻かどうかを判定する
+   * @param hour 時間
+   * @param minute 分
+   * @param config スケジュール設定
+   * @param isWorkingDay 平日かどうか
+   * @returns スケジュール実行時刻の場合、アクションタイプを返す
+   */
+  getScheduleAction(hour: number, minute: number, config: ScheduleConfig, isWorkingDay: boolean): 'start' | 'stop' | null {
+    if (minute !== 0) return null
+    
+    if (isWorkingDay) {
+      const { startHour, stopHour } = config.schedule.workingDays
+      if (hour === startHour) return 'start'
+      if (hour === stopHour) return 'stop'
+    } else {
+      const { stopHour } = config.schedule.holidays
+      if (hour === stopHour) return 'stop'
+    }
+    
+    return null
   }
 }

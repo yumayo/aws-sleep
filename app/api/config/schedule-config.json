@@ -4,5 +4,15 @@
       "clusterName": "example-cluster",
       "serviceName": "example-service"
     }
-  ]
+  ],
+  "schedule": {
+    "workingDays": {
+      "startHour": 9,
+      "stopHour": 21
+    },
+    "holidays": {
+      "stopHour": 21
+    },
+    "delayedHours": 1
+  }
 }

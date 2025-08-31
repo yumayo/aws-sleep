@@ -1,11 +1,14 @@
 import { DelayedStopData } from '../types/scheduler-types'
 import { DelayedStopStorage } from '../services/delayed-stop-storage'
+import { ScheduleConfigStorage } from '../config/schedule-config'
 
 export class SchedulerController {
   private readonly delayedStopStorage: DelayedStopStorage
+  private readonly configStorage: ScheduleConfigStorage
 
-  constructor(delayedStopStorage: DelayedStopStorage) {
+  constructor(delayedStopStorage: DelayedStopStorage, configStorage: ScheduleConfigStorage) {
     this.delayedStopStorage = delayedStopStorage
+    this.configStorage = configStorage
   }
   // 遅延停止申請
   async requestDelayedStop(
@@ -17,14 +20,18 @@ export class SchedulerController {
     previousRequest?: { scheduledTime: Date, requester?: string },
     newDelayedStopData?: DelayedStopData | null
   }> {
+    const config = await this.configStorage.load()
     const now = new Date()
     const hour = now.getHours()
     
-    // 8時～20時の間は遅延申請を拒否（平日の稼働時間帯）
-    if (hour >= 8 && hour < 20) {
+    // 停止期間中かどうかをconfigから判定
+    if (!this.configStorage.isInStopPeriod(hour, config)) {
+      const { startHour, stopHour, delayedHours } = config.schedule.workingDays
+      const validationStart = startHour - delayedHours
+      const validationStop = stopHour - delayedHours
       return {
         success: false,
-        message: 'Delayed stop requests are not allowed during working hours (8:00-20:00)'
+        message: `Delayed stop requests are not allowed during working hours (${validationStart}:00-${validationStop}:00)`
       }
     }
 
@@ -43,7 +50,7 @@ export class SchedulerController {
       console.log(`Canceling existing delayed stop request scheduled for ${existingData.scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} by ${existingData.requester || 'anonymous'}`)
     }
 
-    const scheduledTime = new Date(now.getTime() + 60 * 60 * 1000) // 1時間後
+    const scheduledTime = new Date(now.getTime() + config.schedule.delayedHours * 60 * 60 * 1000) // delayedHours時間後
 
     const newDelayedStopData: DelayedStopData = {
       requestTime: now,
