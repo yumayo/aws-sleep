@@ -39,6 +39,8 @@ services:
       dockerfile: docker/script/Dockerfile
     volumes:
       - ./:/app
+    env_file:
+      - env/script/.env
     tty: true
     stop_grace_period: 0s
 

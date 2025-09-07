@@ -1,0 +1,17 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ECS Service Linked Role'
+
+Resources:
+  ECSServiceLinkedRole:
+    Type: AWS::IAM::ServiceLinkedRole
+    Properties:
+      AWSServiceName: ecs.amazonaws.com
+      Description: 'Service-linked role for Amazon ECS'
+
+Outputs:
+  ServiceLinkedRoleName:
+    Value: !Ref ECSServiceLinkedRole
+    Description: 'Name of the ECS Service Linked Role'
+  ServiceLinkedRoleArn:
+    Value: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS'
+    Description: 'ARN of the ECS Service Linked Role'

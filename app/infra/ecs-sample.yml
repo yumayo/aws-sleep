@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ECS夜間停止テスト用のサンプルCluster and Service'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: sample-cluster
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: !ImportValue ECSExecutionRoleArn
+      NetworkMode: awsvpc
+      ContainerDefinitions:
+        - Name: sample-container
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/nginx:latest'
+
+  ECSService1:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: sample-service-1
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref TaskDefinition
+      LaunchType: FARGATE
+      DesiredCount: 1
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          SecurityGroups:
+            - !Ref SecurityGroup
+          Subnets: !Ref SubnetIds
+
+  ECSService2:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: sample-service-2
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref TaskDefinition
+      LaunchType: FARGATE
+      DesiredCount: 1
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          SecurityGroups:
+            - !Ref SecurityGroup
+          Subnets: !Ref SubnetIds
+
+  ECSService3:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: sample-service-3
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref TaskDefinition
+      LaunchType: FARGATE
+      DesiredCount: 1
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          SecurityGroups:
+            - !Ref SecurityGroup
+          Subnets: !Ref SubnetIds
+
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ECS sample service
+      VpcId: !Ref VpcId
+
+Outputs:
+  ClusterName:
+    Value: !Ref ECSCluster
+  
+  Service1Name:
+    Value: !GetAtt ECSService1.Name
+  
+  Service2Name:
+    Value: !GetAtt ECSService2.Name
+  
+  Service3Name:
+    Value: !GetAtt ECSService3.Name
