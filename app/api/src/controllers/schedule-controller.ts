@@ -1,13 +1,13 @@
 import { DelayedStopData } from '../types/scheduler-types'
 import { DelayedStopStorage } from '../services/delayed-stop-storage'
-import { ScheduleConfigStorage } from '../models/schedule-config-storage'
+import { ConfigStorage } from '../models/schedule-config-storage'
 import { Scheduler } from '../models/scheduler'
 
 export class SchedulerController {
   private readonly delayedStopStorage: DelayedStopStorage
-  private readonly configStorage: ScheduleConfigStorage
+  private readonly configStorage: ConfigStorage
 
-  constructor(delayedStopStorage: DelayedStopStorage, configStorage: ScheduleConfigStorage) {
+  constructor(delayedStopStorage: DelayedStopStorage, configStorage: ConfigStorage) {
     this.delayedStopStorage = delayedStopStorage
     this.configStorage = configStorage
   }

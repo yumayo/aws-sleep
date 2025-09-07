@@ -1,13 +1,15 @@
 import 'dotenv/config'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
+import { ECSClient } from '@aws-sdk/client-ecs'
 import { getHealth } from './controllers/health-controller'
 import { SchedulerController } from './controllers/schedule-controller'
 import { DelayedStopStorage } from './services/delayed-stop-storage'
-import { ScheduleConfigStorage } from './models/schedule-config-storage'
+import { ConfigStorage } from './models/schedule-config-storage'
 import { EcsService } from './services/ecs-service'
 import { EcsDesiredCountStorage } from './services/ecs-desired-count-storage'
 import { Scheduler } from './models/scheduler'
+import { EcsScheduleAction } from './models/ecs-schedule-action'
 
 const fastify = Fastify({
   logger: true
@@ -20,18 +22,20 @@ fastify.register(cors, {
 fastify.get('/api/health', getHealth)
 
 // サービスの初期化
+const configStorage = new ConfigStorage()
+const config = await configStorage.load()
+
+const ecsClient = new ECSClient({region: config.awsResion})
 const ecsDesiredCountStorage = new EcsDesiredCountStorage()
-const ecsService = new EcsService(ecsDesiredCountStorage)
-const configStorage = new ScheduleConfigStorage()
+const ecsService = new EcsService(ecsClient, ecsDesiredCountStorage)
 const delayedStopStorage = new DelayedStopStorage()
 const schedulerController = new SchedulerController(delayedStopStorage, configStorage)
 
-// テスト用エンドポイント
 fastify.get('/api/ecs/status', async (_request, reply) => {
   try {
     const config = await configStorage.load()
     const statusList = await Promise.all(
-      config.items.map(async (ecs) => {
+      config.ecsItems.map(async (ecs) => {
         const desiredCount = await ecsService.getServiceDesiredCount(ecs.clusterName, ecs.serviceName)
         return {
           clusterName: ecs.clusterName,
@@ -47,28 +51,12 @@ fastify.get('/api/ecs/status', async (_request, reply) => {
   }
 })
 
-fastify.post('/api/ecs/stop', async (_request, reply) => {
-  try {
-    console.log('Manual test: Stopping ECS services')
-    const config = await configStorage.load()
-    await Promise.all(
-      config.items.map(ecs => 
-        ecsService.stopService(ecs.clusterName, ecs.serviceName)
-      )
-    )
-    return { status: 'success', message: 'ECS services stop requested' }
-  } catch (error) {
-    reply.code(500)
-    return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
-  }
-})
-
 fastify.post('/api/ecs/start', async (_request, reply) => {
   try {
     console.log('Manual test: Starting ECS services')
     const config = await configStorage.load()
     await Promise.all(
-      config.items.map(ecs => 
+      config.ecsItems.map(ecs => 
         ecsService.startService(ecs.clusterName, ecs.serviceName)
       )
     )
@@ -79,6 +67,21 @@ fastify.post('/api/ecs/start', async (_request, reply) => {
   }
 })
 
+fastify.post('/api/ecs/stop', async (_request, reply) => {
+  try {
+    console.log('Manual test: Stopping ECS services')
+    const config = await configStorage.load()
+    await Promise.all(
+      config.ecsItems.map(ecs => 
+        ecsService.stopService(ecs.clusterName, ecs.serviceName)
+      )
+    )
+    return { status: 'success', message: 'ECS services stop requested' }
+  } catch (error) {
+    reply.code(500)
+    return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
+  }
+})
 
 // 遅延停止申請
 fastify.post('/api/ecs/delay-stop', async (request, _reply) => {
@@ -124,10 +127,11 @@ fastify.get('/api/ecs/delay-status', async (_request, reply) => {
   }
 })
 
-const start = async () => {
+const main = async () => {
   try {
-    // 依存関係の注入
-    const scheduler = new Scheduler(ecsService, configStorage, delayedStopStorage)
+    const config = await configStorage.load()
+    const scheduleActions = config.ecsItems.map((x) => new EcsScheduleAction(ecsService, x))
+    const scheduler = new Scheduler(scheduleActions)
 
     await scheduler.startScheduler()
     console.log('ECS scheduler initialized successfully')
@@ -140,4 +144,4 @@ const start = async () => {
   }
 }
 
-start()
+main()

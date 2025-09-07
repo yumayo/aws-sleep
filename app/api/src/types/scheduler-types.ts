@@ -1,21 +1,25 @@
+export type ScheduleState = 'active' | 'stop'
+
 export interface ScheduleAction {
-  type: 'start' | 'stop'
-  time: Date
-  reason: string
+  getSchedule: () => Schedule
+  invoke: (state: 'active' | 'stop') => Promise<void>
+}
+
+export interface Schedule {
+  startHour: number
+  stopHour: number
 }
 
 export interface ScheduleConfigEcsItem {
   clusterName: string
   serviceName: string
+  startHour: number
+  stopHour: number
 }
 
-export interface ScheduleConfig {
-  items: ScheduleConfigEcsItem[]
-  schedule: {
-    startHour: number
-    stopHour: number
-    delayedHours: number
-  }
+export interface Config {
+  ecsItems: ScheduleConfigEcsItem[]
+  awsResion: string
 }
 
 export interface DelayedStopData {

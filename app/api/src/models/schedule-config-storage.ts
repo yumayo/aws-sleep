@@ -1,58 +1,43 @@
 import { JsonStorage } from '../lib/json-storage'
-import { ScheduleConfig } from '../types/scheduler-types'
+import { Config } from '../types/scheduler-types'
 
-export class ScheduleConfigStorage {
-  private readonly storage: JsonStorage<ScheduleConfig>
+export class ConfigStorage {
+  private readonly storage: JsonStorage<Config>
 
-  constructor(configDir?: string) {
-    this.storage = new JsonStorage<ScheduleConfig>('schedule-config.json', configDir || './config')
+  constructor() {
+    this.storage = new JsonStorage<Config>('config.json', './config')
   }
 
-  async load(): Promise<ScheduleConfig> {
+  async load(): Promise<Config> {
     const config = await this.storage.load()
     
     if (!config) {
-      throw new Error('Schedule config file not found. Please create config/schedule-config.json')
+      throw new Error('Schedule config file not found. Please create config/config.json')
     }
     
     // 設定値の検証
-    if (!config.items || config.items.length === 0) {
+    if (!config.ecsItems || config.ecsItems.length === 0) {
       throw new Error('Schedule config must have at least one item')
     }
     
-    for (const item of config.items) {
+    for (const item of config.ecsItems) {
       if (!item.clusterName || !item.serviceName) {
         throw new Error('Each schedule config item must have clusterName and serviceName')
       }
-    }
 
-    // スケジュール設定の検証
-    if (!config.schedule) {
-      throw new Error('Schedule config must have schedule configuration')
-    }
-    
-    if (config.schedule.startHour === undefined || config.schedule.stopHour === undefined) {
-      throw new Error('Schedule config must have startHour and stopHour configuration')
-    }
-    
-    if (config.schedule.delayedHours === undefined || config.schedule.delayedHours === null) {
-      throw new Error('Schedule config must have delayedHours configuration')
-    }
-    
-    const { startHour, stopHour, delayedHours } = config.schedule
-    
-    if (startHour < 0 || startHour > 23 || stopHour < 0 || stopHour > 23) {
-      throw new Error('Schedule hours must be between 0 and 23')
-    }
-    
-    if (delayedHours < 0 || delayedHours > 12) {
-      throw new Error('Delayed hours must be between 0 and 12')
+      if (item.startHour === undefined || item.stopHour === undefined) {
+        throw new Error('Schedule config must have startHour and stopHour configuration')
+      }
+
+      if (item.startHour < 0 || item.startHour > 23 || item.stopHour < 0 || item.stopHour > 23) {
+        throw new Error('Schedule hours must be between 0 and 23')
+      }
     }
     
     return config
   }
 
-  async save(config: ScheduleConfig): Promise<void> {
+  async save(config: Config): Promise<void> {
     await this.storage.save(config)
   }
 
