@@ -19,7 +19,7 @@ export interface ScheduleConfigEcsItem {
 
 export interface Config {
   ecsItems: ScheduleConfigEcsItem[]
-  awsResion: string
+  awsRegion: string
 }
 
 export interface DelayedStopData {

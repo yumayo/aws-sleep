@@ -25,7 +25,7 @@ fastify.get('/api/health', getHealth)
 const configStorage = new ConfigStorage()
 const config = await configStorage.load()
 
-const ecsClient = new ECSClient({region: config.awsResion})
+const ecsClient = new ECSClient({region: config.awsRegion})
 const ecsDesiredCountStorage = new EcsDesiredCountStorage()
 const ecsService = new EcsService(ecsClient, ecsDesiredCountStorage)
 const delayedStopStorage = new DelayedStopStorage()
