@@ -1,5 +1,5 @@
 import { Schedule, ScheduleAction, ScheduleConfigEcsItem } from "../types/scheduler-types"
-import { EcsService } from "../services/ecs-service"
+import { EcsService } from "./ecs-service"
 
 export class EcsScheduleAction implements ScheduleAction {
   private readonly ecsService: EcsService

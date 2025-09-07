@@ -1,5 +1,5 @@
 import { DelayedStopData } from '../types/scheduler-types'
-import { DelayedStopStorage } from '../services/delayed-stop-storage'
+import { DelayedStopStorage } from '../models/delayed-stop-storage'
 import { ConfigStorage } from '../models/schedule-config-storage'
 import { Scheduler } from '../models/scheduler'
 
