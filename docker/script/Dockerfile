@@ -41,6 +41,22 @@ nvm install --lts && \
 nvm use --lts && \
 nvm alias default node'
 
+RUN apt-get install -y unzip
+
+# AWS CLI の最新バージョンのインストールまたは更新 - AWS Command Line Interface
+# https://docs.aws.amazon.com/ja_jp/cli/latest/userguide/getting-started-install.html
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install
+
+# Docker CLI をインストール
+COPY ./docker/script/install-docker.sh /tmp/install-docker.sh
+RUN bash /tmp/install-docker.sh
+
+# Dockerデーモンを自動起動するスクリプトを作成
+COPY ./docker/script/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 USER ubuntu
 
 WORKDIR /app

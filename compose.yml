@@ -39,10 +39,15 @@ services:
       dockerfile: docker/script/Dockerfile
     volumes:
       - ./:/app
+      - /var/run/docker.sock:/var/run/docker.sock  # ホストのDockerソケット
+      - /var/lib/docker:/var/lib/docker            # イメージキャッシュ共有
     env_file:
       - env/script/.env
+    environment:
+      - DOCKER_HOST_IP=${DOCKER_HOST_IP?error}
     tty: true
     stop_grace_period: 0s
+    privileged: true
 
   web:
     build:
@@ -71,4 +76,5 @@ services:
     tty: true
     stop_grace_period: 0s
 
-    
+volumes:
+  docker-data:

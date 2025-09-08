@@ -1,3 +1,6 @@
+# 初回だけ実行が必要になるロールです。
+# これがないとECSClusterがECSServiceを起動できなかったです。
+
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'ECS Service Linked Role'
 

@@ -17,7 +17,7 @@ async function loadConfig(): Promise<Config> {
 function executeCommand(command: string, description: string): void {
   console.log(`${description}...`);
   try {
-    execSync(command, { stdio: 'inherit' });
+    execSync(command, { stdio: 'pipe' });
   } catch (error) {
     throw new Error(`${description}に失敗しました: ${error}`);
   }
