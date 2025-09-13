@@ -40,10 +40,7 @@ export interface EcsDesiredCountData {
   [key: string]: number // key: "clusterName/serviceName", value: desiredCount
 }
 
-export type ManualOperationType = 'start' | 'stop' | 'delayed-stop'
-
 export interface ManualOperationData {
-  operationType: ManualOperationType
   requestTime: Date
   scheduledTime?: Date // 遅延停止の場合のみ設定
   requester?: string

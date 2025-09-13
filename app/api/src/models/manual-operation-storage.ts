@@ -41,7 +41,7 @@ export class ManualOperationStorage {
   // 遅延停止の場合、スケジュール時刻が過ぎたら自動クリア
   async checkAndClearExpiredDelayedStop(): Promise<boolean> {
     const data = await this.load()
-    if (!data || data.operationType !== 'delayed-stop' || !data.scheduledTime) {
+    if (!data || !data.scheduledTime) {
       return false
     }
 

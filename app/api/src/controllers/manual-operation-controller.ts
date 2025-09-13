@@ -1,4 +1,4 @@
-import { ManualOperationData, ManualOperationType } from '../types/scheduler-types'
+import { ManualOperationData } from '../types/scheduler-types'
 import { ManualOperationStorage } from '../models/manual-operation-storage'
 import { ConfigStorage } from '../models/config-storage'
 import { EcsService } from '../models/ecs/ecs-service'
@@ -64,11 +64,10 @@ export class ManualOperationController {
     const existingOperation = await this.manualOperationStorage.load()
     if (existingOperation) {
       previousOperation = existingOperation
-      console.log(`Canceling existing manual operation: ${existingOperation.operationType}`)
+      console.log('Canceling existing manual operation')
     }
 
     const operationData: ManualOperationData = {
-      operationType: 'start',
       requestTime: now,
       requester
     }
@@ -81,7 +80,7 @@ export class ManualOperationController {
     console.log('Saved manual start operation:', operationData)
 
     const message = previousOperation
-      ? `Manual start mode activated by ${requester || 'anonymous'} (replaced previous ${previousOperation.operationType} operation)`
+      ? `Manual start mode activated by ${requester || 'anonymous'} (replaced previous operation)`
       : `Manual start mode activated by ${requester || 'anonymous'}`
 
     console.log(message)
@@ -108,11 +107,10 @@ export class ManualOperationController {
     const existingOperation = await this.manualOperationStorage.load()
     if (existingOperation) {
       previousOperation = existingOperation
-      console.log(`Canceling existing manual operation: ${existingOperation.operationType}`)
+      console.log('Canceling existing manual operation')
     }
 
     const operationData: ManualOperationData = {
-      operationType: 'stop',
       requestTime: now,
       requester
     }
@@ -125,7 +123,7 @@ export class ManualOperationController {
     console.log('Saved manual stop operation:', operationData)
 
     const message = previousOperation
-      ? `Manual stop mode activated by ${requester || 'anonymous'} (replaced previous ${previousOperation.operationType} operation)`
+      ? `Manual stop mode activated by ${requester || 'anonymous'} (replaced previous operation)`
       : `Manual stop mode activated by ${requester || 'anonymous'}`
 
     console.log(message)
@@ -154,7 +152,7 @@ export class ManualOperationController {
     const existingOperation = await this.manualOperationStorage.load()
     if (existingOperation) {
       previousOperation = existingOperation
-      console.log(`Canceling existing manual operation: ${existingOperation.operationType}`)
+      console.log('Canceling existing manual operation')
     }
 
     if (!requester) {
@@ -166,7 +164,6 @@ export class ManualOperationController {
     }
 
     const operationData: ManualOperationData = {
-      operationType: 'delayed-stop',
       requestTime: now,
       scheduledTime,
       requester
@@ -180,7 +177,7 @@ export class ManualOperationController {
     console.log('Saved delayed stop operation:', operationData)
 
     const message = previousOperation
-      ? `Delayed stop scheduled for ${scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} by ${requester} (replaced previous ${previousOperation.operationType} operation)`
+      ? `Delayed stop scheduled for ${scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} by ${requester} (replaced previous operation)`
       : `Delayed stop scheduled for ${scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} by ${requester}`
 
     console.log(message)
@@ -214,9 +211,9 @@ export class ManualOperationController {
     await this.manualOperationStorage.clear()
     console.log('Cleared manual operation data')
 
-    const logMessage = existingOperation.operationType === 'delayed-stop' && existingOperation.scheduledTime
-      ? `Manual mode canceled - ${existingOperation.operationType} that was scheduled for ${existingOperation.scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`
-      : `Manual mode canceled - ${existingOperation.operationType}`
+    const logMessage = existingOperation.scheduledTime
+      ? `Manual mode canceled - operation that was scheduled for ${existingOperation.scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`
+      : 'Manual mode canceled'
 
     console.log(logMessage)
 
@@ -230,7 +227,6 @@ export class ManualOperationController {
   // マニュアルモード状況を取得
   async getManualModeStatus(): Promise<{
     isActive: boolean,
-    operationType?: ManualOperationType,
     requestedAt?: Date,
     scheduledStopAt?: Date,
     requester?: string
@@ -243,7 +239,6 @@ export class ManualOperationController {
 
     return {
       isActive: true,
-      operationType: operationData.operationType,
       requestedAt: operationData.requestTime,
       scheduledStopAt: operationData.scheduledTime,
       requester: operationData.requester
