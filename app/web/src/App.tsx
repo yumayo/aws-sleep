@@ -202,30 +202,37 @@ export function App() {
     <div>
       <h1>AWS リソース ダッシュボード</h1>
 
-      <div style={{ backgroundColor: '#ffffcc', padding: '10px', margin: '10px 0', border: '1px solid #cccc00' }}>
+      <section>
+        <div style={{ backgroundColor: '#ffffcc', padding: '10px', margin: '10px 0', border: '1px solid #cccc00' }}>
+        <h2>マニュアルモード</h2>
+        <p>
+          マニュアルモード中はサーバーの自動起動と自動停止を行わなくなります。<br/>
+          早朝の勤務や残業、休日に出勤された場合に使用することを想定しています。<br/>
+        </p>
         <strong>{delayStatus?.isActive ? 'マニュアルモード中です。' : 'マニュアルモードではありません。'}</strong>
-        <p>申請者: {delayStatus?.requester || '-'}</p>
-        <p>申請日時: {delayStatus?.requestedAt ? new Date(delayStatus.requestedAt).toLocaleString('ja-JP') : '-'}</p>
-        {delayStatus?.isActive && delayStatus?.scheduledStopAt && (
-          <p>解除予定日時: {new Date(delayStatus.scheduledStopAt).toLocaleString('ja-JP')}</p>
-        )}
+        <p>マニュアルモードモード申請者: {delayStatus?.requester || '-'}</p>
+        <p>マニュアルモードモード申請日時: {delayStatus?.requestedAt ? new Date(delayStatus.requestedAt).toLocaleString('ja-JP') : '-'}</p>
+        <p>マニュアルモードモード解除予定日時: {delayStatus?.scheduledStopAt ? new Date(delayStatus.scheduledStopAt).toLocaleString('ja-JP') : '-'}</p>
         <div>
           <button onClick={startAll} disabled={operationLoading}>
-            起動
+            サーバーを起動する
           </button>
           <button onClick={stopAll} disabled={operationLoading}>
-            停止
+            サーバーを停止する
           </button>
         </div>
         <div>
-          <button onClick={requestDelay} disabled={operationLoading || delayStatus?.isActive}>
-            遅延申請
+          <button onClick={requestDelay} disabled={operationLoading}>
+            今から1時間サーバーを起動したままにする
           </button>
+        </div>
+        <div>
           <button onClick={cancelDelay} disabled={operationLoading || !delayStatus?.isActive}>
-            マニュアルモード解除
+            マニュアルモードを解除する
           </button>
         </div>
       </div>
+      </section>
 
       <section>
         <h2>ECS サービス</h2>
