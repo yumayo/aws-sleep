@@ -45,7 +45,8 @@ export function App() {
   const [showDelayForm, setShowDelayForm] = useState(false)
   const [delayFormData, setDelayFormData] = useState({
     requester: '',
-    scheduledDate: ''
+    scheduledDate: '',
+    isIndefinite: false
   })
 
   const fetchStatus = async () => {
@@ -74,36 +75,6 @@ export function App() {
     }
   }
 
-  const startAll = async () => {
-    if (!confirm('全サービスを起動してマニュアルモードに変更しますか？')) {
-      return
-    }
-
-    try {
-      setOperationLoading(true)
-      setError(null)
-
-      const [ecsResponse, rdsResponse, delayResponse] = await Promise.all([
-        fetch('/api/ecs/start', { method: 'POST' }),
-        fetch('/api/rds/start', { method: 'POST' }),
-        fetch('/api/delay-stop', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requester: 'manual-start' })
-        })
-      ])
-
-      if (!ecsResponse.ok || !rdsResponse.ok) {
-        throw new Error('起動に失敗しました')
-      }
-
-      await fetchStatus()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
-    } finally {
-      setOperationLoading(false)
-    }
-  }
 
   const stopAll = async () => {
     if (!confirm('全サービスを停止してマニュアルモードに変更しますか？')) {
@@ -136,7 +107,7 @@ export function App() {
     }
   }
 
-  const requestDelay = () => {
+  const requestStart = () => {
     const now = new Date()
     const defaultTime = new Date(now.getTime() + 60 * 60 * 1000) // 1時間後
     
@@ -150,12 +121,13 @@ export function App() {
     
     setDelayFormData({
       requester: '',
-      scheduledDate: defaultTimeString
+      scheduledDate: defaultTimeString,
+      isIndefinite: false
     })
     setShowDelayForm(true)
   }
 
-  const submitDelayRequest = async (e: React.FormEvent) => {
+  const submitStartRequest = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!delayFormData.requester.trim()) {
@@ -163,23 +135,28 @@ export function App() {
       return
     }
     
-    if (!delayFormData.scheduledDate) {
+    if (!delayFormData.isIndefinite && !delayFormData.scheduledDate) {
       alert('サーバーの停止日時を入力してください')
       return
     }
 
     const now = new Date()
+    let scheduledDate: Date | null = null
     
-    // datetime-local の値はローカルタイムとして解釈される
-    const scheduledDate = new Date(delayFormData.scheduledDate)
-    
-    if (isNaN(scheduledDate.getTime()) || scheduledDate <= now) {
-      alert('有効な未来の日時を入力してください')
-      return
+    if (!delayFormData.isIndefinite) {
+      // datetime-local の値はローカルタイムとして解釈される
+      scheduledDate = new Date(delayFormData.scheduledDate)
+      
+      if (isNaN(scheduledDate.getTime()) || scheduledDate <= now) {
+        alert('有効な未来の日時を入力してください')
+        return
+      }
     }
 
     // 確認ダイアログを表示
-    const confirmMessage = `${delayFormData.requester.trim()}さんの名前で ${scheduledDate.toLocaleString('ja-JP')} まで起動申請を行いますか？\n起動申請を行うとサーバーが起動され、指定した時刻まで起動状態を維持します。`
+    const confirmMessage = delayFormData.isIndefinite
+      ? `${delayFormData.requester.trim()}さんの名前で無期限起動申請を行いますか？\n起動申請を行うとサーバーが起動され、手動で解除するまで起動状態を維持します。`
+      : `${delayFormData.requester.trim()}さんの名前で ${scheduledDate!.toLocaleString('ja-JP')} まで起動申請を行いますか？\n起動申請を行うとサーバーが起動され、指定した時刻まで起動状態を維持します。`
     if (!confirm(confirmMessage)) {
       return
     }
@@ -193,7 +170,7 @@ export function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           requester: delayFormData.requester.trim(),
-          scheduledDate: scheduledDate.toISOString()
+          scheduledDate: scheduledDate ? scheduledDate.toISOString() : null
         })
       })
 
@@ -210,9 +187,9 @@ export function App() {
     }
   }
 
-  const cancelDelayForm = () => {
+  const cancelStartForm = () => {
     setShowDelayForm(false)
-    setDelayFormData({ requester: '', scheduledDate: '' })
+    setDelayFormData({ requester: '', scheduledDate: '', isIndefinite: false })
   }
 
   const cancelDelay = async () => {
@@ -267,27 +244,19 @@ export function App() {
           マニュアルモード中はサーバーの自動起動と自動停止を行わなくなります。<br/>
           早朝の勤務や残業、休日に出勤された場合に使用することを想定しています。<br/>
         </p>
-        <strong>{delayStatus?.isActive ? 'マニュアルモード中です。' : 'マニュアルモードではありません。'}</strong>
+        <strong>{delayStatus?.isActive ? '現在はマニュアルモード中です。' : '現在はマニュアルモードではありません。'}</strong>
         <p>マニュアルモードモード申請者: {delayStatus?.requester || '-'}</p>
         <p>マニュアルモードモード申請日時: {delayStatus?.requestedAt ? new Date(delayStatus.requestedAt).toLocaleString('ja-JP') : '-'}</p>
         <p>マニュアルモードモード解除予定日時: {delayStatus?.scheduledStopAt ? new Date(delayStatus.scheduledStopAt).toLocaleString('ja-JP') : '-'}</p>
         <div>
-          <button onClick={startAll} disabled={operationLoading}>
+          <button onClick={requestStart} disabled={operationLoading || showDelayForm}>
             サーバーを起動する
-          </button>
-          <button onClick={stopAll} disabled={operationLoading}>
-            サーバーを停止する
-          </button>
-        </div>
-        <div>
-          <button onClick={requestDelay} disabled={operationLoading || showDelayForm}>
-            指定した時刻までサーバーを起動したままにする
           </button>
         </div>
         {showDelayForm && (
           <div style={{ backgroundColor: '#f0f8ff', padding: '15px', margin: '10px 0', border: '2px solid #4169e1', borderRadius: '5px' }}>
             <h3>起動申請</h3>
-            <form onSubmit={submitDelayRequest}>
+            <form onSubmit={submitStartRequest}>
               <div style={{ marginBottom: '10px' }}>
                 <label>
                   申請者名:
@@ -301,16 +270,27 @@ export function App() {
                   />
                 </label>
               </div>
+              <div style={{ marginBottom: '10px' }}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={delayFormData.isIndefinite}
+                    onChange={(e) => setDelayFormData(prev => ({ ...prev, isIndefinite: e.target.checked }))}
+                    disabled={operationLoading}
+                  />
+                  無期限（手動解除まで起動状態を維持）
+                </label>
+              </div>
               <div style={{ marginBottom: '15px' }}>
                 <label>
-                  停止予定日時:
+                  停止日時:
                   <input
                     type="datetime-local"
                     value={delayFormData.scheduledDate}
                     onChange={(e) => setDelayFormData(prev => ({ ...prev, scheduledDate: e.target.value }))}
                     style={{ marginLeft: '10px', padding: '5px' }}
-                    disabled={operationLoading}
-                    required
+                    disabled={operationLoading || delayFormData.isIndefinite}
+                    required={!delayFormData.isIndefinite}
                   />
                 </label>
               </div>
@@ -318,13 +298,18 @@ export function App() {
                 <button type="submit" disabled={operationLoading} style={{ marginRight: '10px' }}>
                   申請する
                 </button>
-                <button type="button" onClick={cancelDelayForm} disabled={operationLoading}>
+                <button type="button" onClick={cancelStartForm} disabled={operationLoading}>
                   キャンセル
                 </button>
               </div>
             </form>
           </div>
         )}
+        <div>
+          <button onClick={stopAll} disabled={operationLoading}>
+            サーバーを停止する
+          </button>
+        </div>
         <div>
           <button onClick={cancelDelay} disabled={operationLoading || !delayStatus?.isActive}>
             マニュアルモードを解除する
@@ -390,8 +375,8 @@ export function App() {
       </section>
 
       <div>
-        <button onClick={fetchStatus}>更新</button>
         <p>最終更新: {new Date().toLocaleString('ja-JP')}</p>
+        <button onClick={fetchStatus}>更新</button>
       </div>
     </div>
   )
