@@ -77,7 +77,7 @@ export function App() {
 
 
   const stopAll = async () => {
-    if (!confirm('全サービスを停止してマニュアルモードに変更しますか？')) {
+    if (!confirm('全サーバーを停止してマニュアルモードに変更しますか？\n停止申請を行うとサーバーが停止され、手動で解除するまで停止状態を維持します。')) {
       return
     }
 
@@ -85,14 +85,9 @@ export function App() {
       setOperationLoading(true)
       setError(null)
 
-      const [ecsResponse, rdsResponse, delayResponse] = await Promise.all([
+      const [ecsResponse, rdsResponse] = await Promise.all([
         fetch('/api/ecs/stop', { method: 'POST' }),
-        fetch('/api/rds/stop', { method: 'POST' }),
-        fetch('/api/delay-stop', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requester: 'manual-stop' })
-        })
+        fetch('/api/rds/stop', { method: 'POST' })
       ])
 
       if (!ecsResponse.ok || !rdsResponse.ok) {
@@ -144,9 +139,7 @@ export function App() {
     let scheduledDate: Date | null = null
     
     if (!delayFormData.isIndefinite) {
-      // datetime-local の値はローカルタイムとして解釈される
       scheduledDate = new Date(delayFormData.scheduledDate)
-      
       if (isNaN(scheduledDate.getTime()) || scheduledDate <= now) {
         alert('有効な未来の日時を入力してください')
         return
@@ -165,7 +158,7 @@ export function App() {
       setOperationLoading(true)
       setError(null)
 
-      const response = await fetch('/api/delay-stop', {
+      const response = await fetch('/api/start-manual-mode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -175,7 +168,7 @@ export function App() {
       })
 
       if (!response.ok) {
-        throw new Error('起動申請に失敗しました')
+        throw new Error('起動申請に失敗しました。')
       }
 
       setShowDelayForm(false)

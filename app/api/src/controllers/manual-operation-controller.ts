@@ -136,15 +136,13 @@ export class ManualOperationController {
     }
   }
 
-  // 遅延停止申請
-  async requestDelayedStop(requester: string | null | undefined, scheduledTime: Date): Promise<{
+  async manualStart(requester?: string, scheduledTime?: Date): Promise<{
     success: boolean,
     message: string,
     scheduledTime?: Date,
     previousOperation?: ManualOperationData | null,
     operationData?: ManualOperationData | null
   }> {
-    const config = await this.configStorage.load()
     const now = new Date()
     let previousOperation: ManualOperationData | null = null
 
@@ -159,8 +157,10 @@ export class ManualOperationController {
       requester = 'anonymous'
     }
 
-    if (scheduledTime <= now) {
-      throw new Error('Scheduled time must be in the future')
+    if (scheduledTime) {
+      if (scheduledTime <= now) {
+        throw new Error('Scheduled time must be in the future')
+      }
     }
 
     const operationData: ManualOperationData = {
@@ -176,9 +176,9 @@ export class ManualOperationController {
     await this.manualOperationStorage.save(operationData)
     console.log('Saved delayed stop operation:', operationData)
 
-    const message = previousOperation
-      ? `Delayed stop scheduled for ${scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} by ${requester} (replaced previous operation)`
-      : `Delayed stop scheduled for ${scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} by ${requester}`
+    const message = scheduledTime
+      ? `Delayed stop scheduled for ${scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} by ${requester}`
+      : `Delayed stop scheduled by ${requester}`
 
     console.log(message)
 

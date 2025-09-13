@@ -42,6 +42,6 @@ export interface EcsDesiredCountData {
 
 export interface ManualOperationData {
   requestTime: Date
-  scheduledTime?: Date // 遅延停止の場合のみ設定
+  scheduledTime?: Date
   requester?: string
 }

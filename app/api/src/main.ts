@@ -154,14 +154,11 @@ fastify.post('/rds/stop', async (request, reply) => {
   }
 })
 
-// 遅延停止申請
-fastify.post('/delay-stop', async (request, _reply) => {
+fastify.post('/start-manual-mode', async (request, _reply) => {
   try {
-    const body = request.body as { requester?: string, scheduledDate: string | null }
+    const body = request.body as { requester?: string, scheduledDate?: string }
 
-    const result = body?.scheduledDate
-      ? await manualOperationController.requestDelayedStop(body?.requester, new Date(body.scheduledDate))
-      : await manualOperationController.requestManualStart(body?.requester)
+    const result = await manualOperationController.manualStart(body?.requester, body.scheduledDate ? new Date(body.scheduledDate) : undefined)
 
     if (!result.success) {
       _reply.code(409) // Conflict
