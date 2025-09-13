@@ -41,9 +41,9 @@ export function App() {
       setError(null)
 
       const [ecsResponse, rdsResponse, delayResponse] = await Promise.all([
-        fetch('/ecs/status'),
-        fetch('/rds/status'),
-        fetch('/manual-mode-status')
+        fetch('/api/ecs/status'),
+        fetch('/api/rds/status'),
+        fetch('/api/manual-mode-status')
       ])
 
       if (!ecsResponse.ok || !rdsResponse.ok || !delayResponse.ok) {
@@ -73,9 +73,9 @@ export function App() {
       setError(null)
 
       const [ecsResponse, rdsResponse, delayResponse] = await Promise.all([
-        fetch('/ecs/start', { method: 'POST' }),
-        fetch('/rds/start', { method: 'POST' }),
-        fetch('/delay-stop', {
+        fetch('/api/ecs/start', { method: 'POST' }),
+        fetch('/api/rds/start', { method: 'POST' }),
+        fetch('/api/delay-stop', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ requester: 'manual-start' })
@@ -104,9 +104,9 @@ export function App() {
       setError(null)
 
       const [ecsResponse, rdsResponse, delayResponse] = await Promise.all([
-        fetch('/ecs/stop', { method: 'POST' }),
-        fetch('/rds/stop', { method: 'POST' }),
-        fetch('/delay-stop', {
+        fetch('/api/ecs/stop', { method: 'POST' }),
+        fetch('/api/rds/stop', { method: 'POST' }),
+        fetch('/api/delay-stop', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ requester: 'manual-stop' })
@@ -115,6 +115,38 @@ export function App() {
 
       if (!ecsResponse.ok || !rdsResponse.ok) {
         throw new Error('停止に失敗しました')
+      }
+
+      await fetchStatus()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      setOperationLoading(false)
+    }
+  }
+
+  const requestDelay = async () => {
+    const requester = prompt('申請者名を入力してください:')
+    if (!requester || !requester.trim()) {
+      return
+    }
+
+    if (!confirm(`${requester}さんの名前で遅延申請を行いますか？`)) {
+      return
+    }
+
+    try {
+      setOperationLoading(true)
+      setError(null)
+
+      const response = await fetch('/api/delay-stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requester: requester.trim() })
+      })
+
+      if (!response.ok) {
+        throw new Error('遅延申請に失敗しました')
       }
 
       await fetchStatus()
@@ -134,7 +166,7 @@ export function App() {
       setOperationLoading(true)
       setError(null)
 
-      const response = await fetch('/cancel-manual-mode', {
+      const response = await fetch('/api/cancel-manual-mode', {
         method: 'POST'
       })
 
@@ -171,21 +203,28 @@ export function App() {
       <h1>AWS リソース ダッシュボード</h1>
 
       <div style={{ backgroundColor: '#ffffcc', padding: '10px', margin: '10px 0', border: '1px solid #cccc00' }}>
-        <strong>マニュアルモード {delayStatus?.isActive ? '中' : '無効'}</strong>
+        <strong>{delayStatus?.isActive ? 'マニュアルモード中です。' : 'マニュアルモードではありません。'}</strong>
         <p>申請者: {delayStatus?.requester || '-'}</p>
-        <p>申請日時: {delayStatus?.requestedAt || '-'}</p>
-        <button onClick={cancelDelay} disabled={operationLoading || !delayStatus?.isActive}>
-          マニュアルモード解除
-        </button>
-      </div>
-
-      <div>
-        <button onClick={startAll} disabled={operationLoading}>
-          起動
-        </button>
-        <button onClick={stopAll} disabled={operationLoading}>
-          停止
-        </button>
+        <p>申請日時: {delayStatus?.requestedAt ? new Date(delayStatus.requestedAt).toLocaleString('ja-JP') : '-'}</p>
+        {delayStatus?.isActive && delayStatus?.scheduledStopAt && (
+          <p>解除予定日時: {new Date(delayStatus.scheduledStopAt).toLocaleString('ja-JP')}</p>
+        )}
+        <div>
+          <button onClick={startAll} disabled={operationLoading}>
+            起動
+          </button>
+          <button onClick={stopAll} disabled={operationLoading}>
+            停止
+          </button>
+        </div>
+        <div>
+          <button onClick={requestDelay} disabled={operationLoading || delayStatus?.isActive}>
+            遅延申請
+          </button>
+          <button onClick={cancelDelay} disabled={operationLoading || !delayStatus?.isActive}>
+            マニュアルモード解除
+          </button>
+        </div>
       </div>
 
       <section>

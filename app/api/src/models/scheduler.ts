@@ -60,7 +60,9 @@ export class Scheduler {
     const isManualModeActive = await this.manualOperationStorage.isManualModeActive()
     if (isManualModeActive) {
       const manualOperation = await this.manualOperationStorage.load()
-      console.log(`Manual mode active - scheduler skipped (operation: ${manualOperation?.operationType})`)
+      const requestedAt = manualOperation?.requestTime ? new Date(manualOperation.requestTime).toLocaleString('ja-JP') : 'unknown'
+      const scheduledStopAt = manualOperation?.scheduledTime ? new Date(manualOperation.scheduledTime).toLocaleString('ja-JP') : 'not scheduled'
+      console.log(`Manual mode active - scheduler skipped (operation: ${manualOperation?.operationType}, requester: ${manualOperation?.requester}, requested: ${requestedAt}, scheduled stop: ${scheduledStopAt})`)
       return
     }
 

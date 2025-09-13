@@ -181,8 +181,8 @@ export class ManualOperationController {
   async getManualModeStatus(): Promise<{
     isActive: boolean,
     operationType?: ManualOperationType,
-    requestTime?: Date,
-    scheduledTime?: Date,
+    requestedAt?: Date,
+    scheduledStopAt?: Date,
     requester?: string
   }> {
     const operationData = await this.manualOperationStorage.load()
@@ -194,8 +194,8 @@ export class ManualOperationController {
     return {
       isActive: true,
       operationType: operationData.operationType,
-      requestTime: operationData.requestTime,
-      scheduledTime: operationData.scheduledTime,
+      requestedAt: operationData.requestTime,
+      scheduledStopAt: operationData.scheduledTime,
       requester: operationData.requester
     }
   }
