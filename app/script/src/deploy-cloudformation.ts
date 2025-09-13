@@ -72,6 +72,17 @@ function getParametersForTemplate(templateFile: string, config: Config): Paramet
         ParameterValue: config.vpc.subnets.map(subnet => subnet.subnetId).join(',')
       }
     ];
+  } else if (fileName == 'vpc-endpoints.yml') {
+    return [
+      {
+        ParameterKey: 'VpcId',
+        ParameterValue: config.vpc.vpcId
+      },
+      {
+        ParameterKey: 'SubnetIds',
+        ParameterValue: config.vpc.subnets.map(subnet => subnet.subnetId).join(',')
+      }
+    ];
   }
   
   // その他のテンプレート（ecr-repository.yml、ecs-execution-role.yml等）はパラメータ不要
