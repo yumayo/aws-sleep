@@ -4,8 +4,8 @@ import cors from '@fastify/cors'
 import { ECSClient } from '@aws-sdk/client-ecs'
 import { getHealth } from './controllers/health-controller'
 import { SchedulerController } from './controllers/schedule-controller'
-import { DelayedStopStorage } from './models/delayed-stop-storage'
-import { ConfigStorage } from './models/schedule-config-storage'
+import { DelayedStopDataStorage } from './models/delayed-stop-data-storage'
+import { ConfigStorage } from './models/config-storage'
 import { EcsService } from './models/ecs-service'
 import { EcsDesiredCountStorage } from './models/ecs-desired-count-storage'
 import { Scheduler } from './models/scheduler'
@@ -28,7 +28,7 @@ const config = await configStorage.load()
 const ecsClient = new ECSClient({region: config.awsRegion})
 const ecsDesiredCountStorage = new EcsDesiredCountStorage()
 const ecsService = new EcsService(ecsClient, ecsDesiredCountStorage)
-const delayedStopStorage = new DelayedStopStorage()
+const delayedStopStorage = new DelayedStopDataStorage()
 const schedulerController = new SchedulerController(delayedStopStorage, configStorage)
 
 fastify.get('/api/ecs/status', async (_request, reply) => {

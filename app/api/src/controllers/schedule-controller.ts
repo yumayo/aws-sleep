@@ -1,14 +1,13 @@
 import { DelayedStopData } from '../types/scheduler-types'
-import { DelayedStopStorage } from '../models/delayed-stop-storage'
-import { ConfigStorage } from '../models/schedule-config-storage'
-import { Scheduler } from '../models/scheduler'
+import { DelayedStopDataStorage } from '../models/delayed-stop-data-storage'
+import { ConfigStorage } from '../models/config-storage'
 
 export class SchedulerController {
-  private readonly delayedStopStorage: DelayedStopStorage
+  private readonly delayedStopDataStorage: DelayedStopDataStorage
   private readonly configStorage: ConfigStorage
 
-  constructor(delayedStopStorage: DelayedStopStorage, configStorage: ConfigStorage) {
-    this.delayedStopStorage = delayedStopStorage
+  constructor(delayedStopStorage: DelayedStopDataStorage, configStorage: ConfigStorage) {
+    this.delayedStopDataStorage = delayedStopStorage
     this.configStorage = configStorage
   }
   // 遅延停止申請
@@ -23,35 +22,23 @@ export class SchedulerController {
   }> {
     const config = await this.configStorage.load()
     const now = new Date()
-    const hour = now.getHours()
-    
-    // 停止期間中かどうかをconfigから判定
-    if (!Scheduler.isInStopPeriod(hour, config)) {
-      const { startHour, stopHour, delayedHours } = config.schedule
-      const validationStart = startHour - delayedHours
-      const validationStop = stopHour - delayedHours
-      return {
-        success: false,
-        message: `Delayed stop requests are not allowed during working hours (${validationStart}:00-${validationStop}:00)`
-      }
-    }
 
     let previousRequest: { scheduledTime: Date, requester?: string } | undefined
 
     // 既存のデータを読み込み
-    const existingData = await this.delayedStopStorage.load()
+    const delayedStopData = await this.delayedStopDataStorage.load()
     
     // 既に申請がある場合は自動取消して新申請を受け付け
-    if (existingData) {
+    if (delayedStopData) {
       previousRequest = {
-        scheduledTime: existingData.scheduledTime,
-        requester: existingData.requester
+        scheduledTime: delayedStopData.scheduledTime,
+        requester: delayedStopData.requester
       }
-      
-      console.log(`Canceling existing delayed stop request scheduled for ${existingData.scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} by ${existingData.requester || 'anonymous'}`)
+
+      console.log(`Canceling existing delayed stop request scheduled for ${delayedStopData.scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} by ${delayedStopData.requester || 'anonymous'}`)
     }
 
-    const scheduledTime = new Date(now.getTime() + config.schedule.delayedHours * 60 * 60 * 1000) // delayedHours時間後
+    const scheduledTime = new Date(now.getTime() + config.delayHour * 60 * 60 * 1000) // delayedHours時間後
 
     const newDelayedStopData: DelayedStopData = {
       requestTime: now,
@@ -60,7 +47,7 @@ export class SchedulerController {
     }
 
     // データを保存
-    await this.delayedStopStorage.save(newDelayedStopData)
+    await this.delayedStopDataStorage.save(newDelayedStopData)
     console.log('Saved delayed stop data:', newDelayedStopData)
 
     const logMessage = previousRequest 
@@ -89,7 +76,7 @@ export class SchedulerController {
     newDelayedStopData?: DelayedStopData | null
   }> {
     // 現在のデータを読み込み
-    const existingData = await this.delayedStopStorage.load()
+    const existingData = await this.delayedStopDataStorage.load()
     
     if (!existingData) {
       return {
@@ -101,7 +88,7 @@ export class SchedulerController {
     const scheduledTime = existingData.scheduledTime
 
     // データをクリア
-    await this.delayedStopStorage.clear()
+    await this.delayedStopDataStorage.clear()
     console.log('Cleared delayed stop data')
 
     console.log(`Delayed stop canceled that was scheduled for ${scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`)
@@ -120,7 +107,7 @@ export class SchedulerController {
     scheduledTime?: Date, 
     requester?: string 
   }> {
-    const existingData = await this.delayedStopStorage.load()
+    const existingData = await this.delayedStopDataStorage.load()
     
     if (!existingData) {
       return { hasRequest: false }
@@ -136,6 +123,6 @@ export class SchedulerController {
 
   // 現在のDelayedStopDataを取得（Schedulerから使用）
   async getCurrentDelayedStopData(): Promise<DelayedStopData | null> {
-    return await this.delayedStopStorage.load()
+    return await this.delayedStopDataStorage.load()
   }
 }

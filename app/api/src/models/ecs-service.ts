@@ -37,7 +37,7 @@ export class EcsService {
 
   async getServiceDesiredCount(clusterName: string, serviceName: string): Promise<number> {
     try {
-      const command = new DescribeServicesCommand({
+      const command = new DescribeServicesCommand({ 
         cluster: clusterName,
         services: [serviceName]
       })
