@@ -25,6 +25,7 @@ export function App() {
   const [ecsServices, setEcsServices] = useState<EcsService[]>([])
   const [rdsClusters, setRdsClusters] = useState<RdsCluster[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [operationLoading, setOperationLoading] = useState(false)
 
   const fetchStatus = async () => {
     try {
@@ -49,6 +50,50 @@ export function App() {
     }
   }
 
+  const startAll = async () => {
+    try {
+      setOperationLoading(true)
+      setError(null)
+
+      const [ecsResponse, rdsResponse] = await Promise.all([
+        fetch('/api/ecs/start', { method: 'POST' }),
+        fetch('/api/rds/start', { method: 'POST' })
+      ])
+
+      if (!ecsResponse.ok || !rdsResponse.ok) {
+        throw new Error('起動に失敗しました')
+      }
+
+      await fetchStatus()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      setOperationLoading(false)
+    }
+  }
+
+  const stopAll = async () => {
+    try {
+      setOperationLoading(true)
+      setError(null)
+
+      const [ecsResponse, rdsResponse] = await Promise.all([
+        fetch('/api/ecs/stop', { method: 'POST' }),
+        fetch('/api/rds/stop', { method: 'POST' })
+      ])
+
+      if (!ecsResponse.ok || !rdsResponse.ok) {
+        throw new Error('停止に失敗しました')
+      }
+
+      await fetchStatus()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      setOperationLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchStatus()
     const interval = setInterval(fetchStatus, 3000)
@@ -69,6 +114,15 @@ export function App() {
     <div>
       <h1>AWS リソース ダッシュボード</h1>
 
+      <div>
+        <button onClick={startAll} disabled={operationLoading}>
+          起動
+        </button>
+        <button onClick={stopAll} disabled={operationLoading}>
+          停止
+        </button>
+      </div>
+
       <section>
         <h2>ECS サービス</h2>
         <table border={1}>
@@ -86,7 +140,7 @@ export function App() {
                 <td>{service.clusterName}</td>
                 <td>{service.serviceName}</td>
                 <td>{service.desiredCount}</td>
-                <td>{service.desiredCount > 0 ? '稼働中' : '停止中'}</td>
+                <td>{service.desiredCount > 0 ? 'available' : 'stopped'}</td>
               </tr>
             ))}
           </tbody>
