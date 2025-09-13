@@ -37,6 +37,7 @@ Resources:
       DesiredCount: 1
       NetworkConfiguration:
         AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
           SecurityGroups:
             - !Ref SecurityGroup
           Subnets: !Ref SubnetIds
@@ -51,6 +52,7 @@ Resources:
       DesiredCount: 1
       NetworkConfiguration:
         AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
           SecurityGroups:
             - !Ref SecurityGroup
           Subnets: !Ref SubnetIds
@@ -65,6 +67,7 @@ Resources:
       DesiredCount: 1
       NetworkConfiguration:
         AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
           SecurityGroups:
             - !Ref SecurityGroup
           Subnets: !Ref SubnetIds
