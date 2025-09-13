@@ -19,6 +19,13 @@
       "stopHour": 21
     }
   ],
+  "rdsItems": [
+    {
+      "clusterName": "rds-aurora-sample-auroracluster-zoizerqxon9k",
+      "startHour": 9,
+      "stopHour": 21
+    }
+  ],
   "awsRegion": "ap-northeast-1",
   "delayHour": 1
 }

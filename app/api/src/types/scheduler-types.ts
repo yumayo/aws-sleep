@@ -17,8 +17,15 @@ export interface ScheduleConfigEcsItem {
   stopHour: number
 }
 
+export interface ScheduleConfigRdsItem {
+  clusterName: string
+  startHour: number
+  stopHour: number
+}
+
 export interface Config {
   ecsItems: ScheduleConfigEcsItem[]
+  rdsItems: ScheduleConfigRdsItem[]
   awsRegion: string
   delayHour: number
 }
