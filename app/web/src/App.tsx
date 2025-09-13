@@ -41,9 +41,9 @@ export function App() {
       setError(null)
 
       const [ecsResponse, rdsResponse, delayResponse] = await Promise.all([
-        fetch('/api/ecs/status'),
-        fetch('/api/rds/status'),
-        fetch('/api/ecs/delay-status')
+        fetch('/ecs/status'),
+        fetch('/rds/status'),
+        fetch('/manual-mode-status')
       ])
 
       if (!ecsResponse.ok || !rdsResponse.ok || !delayResponse.ok) {
@@ -73,9 +73,9 @@ export function App() {
       setError(null)
 
       const [ecsResponse, rdsResponse, delayResponse] = await Promise.all([
-        fetch('/api/ecs/start', { method: 'POST' }),
-        fetch('/api/rds/start', { method: 'POST' }),
-        fetch('/api/ecs/delay-stop', {
+        fetch('/ecs/start', { method: 'POST' }),
+        fetch('/rds/start', { method: 'POST' }),
+        fetch('/delay-stop', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ requester: 'manual-start' })
@@ -104,9 +104,9 @@ export function App() {
       setError(null)
 
       const [ecsResponse, rdsResponse, delayResponse] = await Promise.all([
-        fetch('/api/ecs/stop', { method: 'POST' }),
-        fetch('/api/rds/stop', { method: 'POST' }),
-        fetch('/api/ecs/delay-stop', {
+        fetch('/ecs/stop', { method: 'POST' }),
+        fetch('/rds/stop', { method: 'POST' }),
+        fetch('/delay-stop', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ requester: 'manual-stop' })
@@ -134,8 +134,8 @@ export function App() {
       setOperationLoading(true)
       setError(null)
 
-      const response = await fetch('/api/ecs/delay-stop', {
-        method: 'DELETE'
+      const response = await fetch('/cancel-manual-mode', {
+        method: 'POST'
       })
 
       if (!response.ok) {

@@ -22,7 +22,7 @@ fastify.register(cors, {
   origin: true
 })
 
-fastify.get('/api/health', getHealth)
+fastify.get('/health', getHealth)
 
 // サービスの初期化
 const configStorage = new ConfigStorage()
@@ -36,7 +36,7 @@ const rdsService = new RdsService(rdsClient)
 const manualOperationStorage = new ManualOperationStorage()
 const manualOperationController = new ManualOperationController(manualOperationStorage, configStorage)
 
-fastify.get('/api/ecs/status', async (_request, reply) => {
+fastify.get('/ecs/status', async (_request, reply) => {
   try {
     const config = await configStorage.load()
     const statusList = await Promise.all(
@@ -56,7 +56,7 @@ fastify.get('/api/ecs/status', async (_request, reply) => {
   }
 })
 
-fastify.get('/api/rds/status', async (_request, reply) => {
+fastify.get('/rds/status', async (_request, reply) => {
   try {
     const config = await configStorage.load()
     const statusList = await Promise.all(
@@ -75,7 +75,7 @@ fastify.get('/api/rds/status', async (_request, reply) => {
   }
 })
 
-fastify.post('/api/ecs/start', async (request, reply) => {
+fastify.post('/ecs/start', async (request, reply) => {
   try {
     const body = request.body as { requester?: string }
     console.log('Manual start: Starting ECS services')
@@ -100,7 +100,7 @@ fastify.post('/api/ecs/start', async (request, reply) => {
   }
 })
 
-fastify.post('/api/ecs/stop', async (request, reply) => {
+fastify.post('/ecs/stop', async (request, reply) => {
   try {
     const body = request.body as { requester?: string }
     console.log('Manual stop: Stopping ECS services')
@@ -125,7 +125,7 @@ fastify.post('/api/ecs/stop', async (request, reply) => {
   }
 })
 
-fastify.post('/api/rds/start', async (request, reply) => {
+fastify.post('/rds/start', async (request, reply) => {
   try {
     const body = request.body as { requester?: string }
     console.log('Manual start: Starting RDS clusters')
@@ -150,7 +150,7 @@ fastify.post('/api/rds/start', async (request, reply) => {
   }
 })
 
-fastify.post('/api/rds/stop', async (request, reply) => {
+fastify.post('/rds/stop', async (request, reply) => {
   try {
     const body = request.body as { requester?: string }
     console.log('Manual stop: Stopping RDS clusters')
@@ -176,7 +176,7 @@ fastify.post('/api/rds/stop', async (request, reply) => {
 })
 
 // 遅延停止申請
-fastify.post('/api/ecs/delay-stop', async (request, _reply) => {
+fastify.post('/delay-stop', async (request, _reply) => {
   try {
     const body = request.body as { requester?: string }
     const result = await manualOperationController.requestDelayedStop(body?.requester)
@@ -193,7 +193,7 @@ fastify.post('/api/ecs/delay-stop', async (request, _reply) => {
 })
 
 // マニュアルモード解除
-fastify.delete('/api/ecs/delay-stop', async (_request, reply) => {
+fastify.post('/cancel-manual-mode', async (_request, reply) => {
   try {
     const result = await manualOperationController.cancelManualMode()
 
@@ -209,7 +209,7 @@ fastify.delete('/api/ecs/delay-stop', async (_request, reply) => {
 })
 
 // マニュアルモード状況確認
-fastify.get('/api/ecs/delay-status', async (_request, reply) => {
+fastify.get('/manual-mode-status', async (_request, reply) => {
   try {
     const status = await manualOperationController.getManualModeStatus()
     return { status: 'success', ...status }
