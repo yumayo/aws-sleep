@@ -62,7 +62,18 @@ export class Scheduler {
       const manualOperation = await this.manualOperationStorage.load()
       const requestedAt = manualOperation?.requestTime ? new Date(manualOperation.requestTime).toLocaleString('ja-JP') : 'unknown'
       const scheduledStopAt = manualOperation?.scheduledTime ? new Date(manualOperation.scheduledTime).toLocaleString('ja-JP') : 'not scheduled'
-      console.log(`Manual mode active - scheduler skipped (requester: ${manualOperation?.requester}, requested: ${requestedAt}, scheduled stop: ${scheduledStopAt})`)
+      const operationMode = manualOperation?.operationMode || 'unknown'
+      
+      console.log(`Manual mode active - maintaining ${operationMode} state (requester: ${manualOperation?.requester}, requested: ${requestedAt}, scheduled stop: ${scheduledStopAt})`)
+      
+      // operationModeに応じて状態を維持
+      for (const scheduleAction of this.scheduleActions) {
+        if (operationMode === 'active') {
+          await scheduleAction.invoke('active')
+        } else if (operationMode === 'stop') {
+          await scheduleAction.invoke('stop')
+        }
+      }
       return
     }
 

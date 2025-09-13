@@ -69,7 +69,8 @@ export class ManualOperationController {
 
     const operationData: ManualOperationData = {
       requestTime: now,
-      requester
+      requester,
+      operationMode: 'active'
     }
 
     // サービスを起動
@@ -112,7 +113,8 @@ export class ManualOperationController {
 
     const operationData: ManualOperationData = {
       requestTime: now,
-      requester
+      requester,
+      operationMode: 'stop'
     }
 
     // サービスを停止
@@ -166,7 +168,8 @@ export class ManualOperationController {
     const operationData: ManualOperationData = {
       requestTime: now,
       scheduledTime,
-      requester
+      requester,
+      operationMode: 'active'
     }
 
     // サービスを起動

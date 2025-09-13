@@ -40,8 +40,11 @@ export interface EcsDesiredCountData {
   [key: string]: number // key: "clusterName/serviceName", value: desiredCount
 }
 
+export type OperationMode = 'active' | 'stop'
+
 export interface ManualOperationData {
   requestTime: Date
   scheduledTime?: Date
   requester?: string
+  operationMode: OperationMode
 }
