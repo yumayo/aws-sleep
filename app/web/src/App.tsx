@@ -4,6 +4,9 @@ interface EcsService {
   clusterName: string
   serviceName: string
   desiredCount: number
+  runningCount: number
+  pendingCount: number
+  status: string
 }
 
 interface RdsCluster {
@@ -53,7 +56,6 @@ export function App() {
 
       if (!ecsResponse.ok || !rdsResponse.ok || !delayResponse.ok) {
         return
-        throw new Error('API request failed')
       }
 
       const ecsData: EcsStatusResponse = await ecsResponse.json()
@@ -334,7 +336,9 @@ export function App() {
             <tr>
               <th>クラスター名</th>
               <th>サービス名</th>
-              <th>台数</th>
+              <th>希望台数</th>
+              <th>実行中</th>
+              <th>開始中</th>
               <th>状態</th>
             </tr>
           </thead>
@@ -344,7 +348,9 @@ export function App() {
                 <td>{service.clusterName}</td>
                 <td>{service.serviceName}</td>
                 <td>{service.desiredCount}</td>
-                <td>{service.desiredCount > 0 ? 'available' : 'stopped'}</td>
+                <td>{service.runningCount}</td>
+                <td>{service.pendingCount}</td>
+                <td>{service.status}</td>
               </tr>
             ))}
           </tbody>

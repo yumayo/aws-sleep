@@ -41,11 +41,14 @@ fastify.get('/ecs/status', async (_request, reply) => {
     const config = await configStorage.load()
     const statusList = await Promise.all(
       config.ecsItems.map(async (ecs) => {
-        const desiredCount = await ecsService.getServiceDesiredCount(ecs.clusterName, ecs.serviceName)
+        const serviceStatus = await ecsService.getServiceStatus(ecs.clusterName, ecs.serviceName)
         return {
           clusterName: ecs.clusterName,
           serviceName: ecs.serviceName,
-          desiredCount
+          desiredCount: serviceStatus.desiredCount,
+          runningCount: serviceStatus.runningCount,
+          pendingCount: serviceStatus.pendingCount,
+          status: serviceStatus.status
         }
       })
     )
