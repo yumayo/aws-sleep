@@ -67,10 +67,13 @@ export class ScheduleStateCalculator {
     todayEndDate.setTime(todayEndDate.getTime() + 2) // うるう秒対策
     todayEndDate.setHours(0, 0, 0, 0)
 
+    const [startHour, startMinute] = schedule.startDate.split(':').map(Number)
+    const [stopHour, stopMinute] = schedule.stopDate.split(':').map(Number)
+    
     const scheduleStartDate = new Date(date)
-    scheduleStartDate.setHours(schedule.startHour, 0, 0, 0)
+    scheduleStartDate.setHours(startHour, startMinute, 0, 0)
     const scheduleStopDate = new Date(date)
-    scheduleStopDate.setHours(schedule.stopHour, 0, 0, 0)
+    scheduleStopDate.setHours(stopHour, stopMinute, 0, 0)
 
     if (date < scheduleStartDate) {
       return 'stop'

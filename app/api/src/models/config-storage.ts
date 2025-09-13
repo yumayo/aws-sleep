@@ -25,16 +25,21 @@ export class ConfigStorage {
         throw new Error('Each schedule config item must have clusterName and serviceName')
       }
 
-      if (item.startHour === undefined || item.stopHour === undefined) {
-        throw new Error('Schedule config must have startHour and stopHour configuration')
+      if (item.startDate === undefined || item.stopDate === undefined) {
+        throw new Error('Schedule config must have startDate and stopDate configuration')
       }
 
-      if (item.startHour < 0 || item.startHour > 23 || item.stopHour < 0 || item.stopHour > 23) {
-        throw new Error('Schedule hours must be between 0 and 23')
+      if (!this.isValidTimeFormat(item.startDate) || !this.isValidTimeFormat(item.stopDate)) {
+        throw new Error('Time format must be HH:MM (e.g., 09:00, 21:30)')
       }
     }
     
     return config
+  }
+
+  private isValidTimeFormat(time: string): boolean {
+    const timeRegex = /^([01]?[0-9]|2[0-3]):([0-5][0-9])$/
+    return timeRegex.test(time)
   }
 
   async save(config: Config): Promise<void> {

@@ -6,21 +6,21 @@ export interface ScheduleAction {
 }
 
 export interface Schedule {
-  startHour: number
-  stopHour: number
+  startDate: string
+  stopDate: string
 }
 
 export interface ScheduleConfigEcsItem {
   clusterName: string
   serviceName: string
-  startHour: number
-  stopHour: number
+  startDate: string
+  stopDate: string
 }
 
 export interface ScheduleConfigRdsItem {
   clusterName: string
-  startHour: number
-  stopHour: number
+  startDate: string
+  stopDate: string
 }
 
 export interface Config {

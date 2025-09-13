@@ -49,8 +49,8 @@ fastify.get('/ecs/status', async (_request, reply) => {
           runningCount: serviceStatus.runningCount,
           pendingCount: serviceStatus.pendingCount,
           status: serviceStatus.status,
-          startHour: ecs.startHour,
-          stopHour: ecs.stopHour
+          startDate: ecs.startDate,
+          stopDate: ecs.stopDate
         }
       })
     )
@@ -70,8 +70,8 @@ fastify.get('/rds/status', async (_request, reply) => {
         return {
           clusterName: rds.clusterName,
           status,
-          startHour: rds.startHour,
-          stopHour: rds.stopHour
+          startDate: rds.startDate,
+          stopDate: rds.stopDate
         }
       })
     )

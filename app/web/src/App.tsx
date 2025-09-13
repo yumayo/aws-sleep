@@ -7,15 +7,15 @@ interface EcsService {
   runningCount: number
   pendingCount: number
   status: string
-  startHour: number
-  stopHour: number
+  startDate: string
+  stopDate: string
 }
 
 interface RdsCluster {
   clusterName: string
   status: string
-  startHour: number
-  stopHour: number
+  startDate: string
+  stopDate: string
 }
 
 interface EcsStatusResponse {
@@ -356,8 +356,8 @@ export function App() {
                 <td>{service.desiredCount}</td>
                 <td>{service.runningCount}</td>
                 <td>{service.pendingCount}</td>
-                <td>{service.startHour}:00</td>
-                <td>{service.stopHour}:00</td>
+                <td>{service.startDate}</td>
+                <td>{service.stopDate}</td>
                 <td>{service.status}</td>
               </tr>
             ))}
@@ -380,8 +380,8 @@ export function App() {
             {rdsClusters.map((cluster, index) => (
               <tr key={index}>
                 <td>{cluster.clusterName}</td>
-                <td>{cluster.startHour}:00</td>
-                <td>{cluster.stopHour}:00</td>
+                <td>{cluster.startDate}</td>
+                <td>{cluster.stopDate}</td>
                 <td>{cluster.status}</td>
               </tr>
             ))}
