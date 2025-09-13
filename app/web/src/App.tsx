@@ -7,11 +7,15 @@ interface EcsService {
   runningCount: number
   pendingCount: number
   status: string
+  startHour: number
+  stopHour: number
 }
 
 interface RdsCluster {
   clusterName: string
   status: string
+  startHour: number
+  stopHour: number
 }
 
 interface EcsStatusResponse {
@@ -339,6 +343,8 @@ export function App() {
               <th>希望台数</th>
               <th>実行中</th>
               <th>開始中</th>
+              <th>開始時刻</th>
+              <th>停止時刻</th>
               <th>状態</th>
             </tr>
           </thead>
@@ -350,6 +356,8 @@ export function App() {
                 <td>{service.desiredCount}</td>
                 <td>{service.runningCount}</td>
                 <td>{service.pendingCount}</td>
+                <td>{service.startHour}:00</td>
+                <td>{service.stopHour}:00</td>
                 <td>{service.status}</td>
               </tr>
             ))}
@@ -363,6 +371,8 @@ export function App() {
           <thead>
             <tr>
               <th>クラスター名</th>
+              <th>開始時刻</th>
+              <th>停止時刻</th>
               <th>状態</th>
             </tr>
           </thead>
@@ -370,6 +380,8 @@ export function App() {
             {rdsClusters.map((cluster, index) => (
               <tr key={index}>
                 <td>{cluster.clusterName}</td>
+                <td>{cluster.startHour}:00</td>
+                <td>{cluster.stopHour}:00</td>
                 <td>{cluster.status}</td>
               </tr>
             ))}
