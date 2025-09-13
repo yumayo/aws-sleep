@@ -198,23 +198,19 @@ fastify.get('/manual-mode-status', async (_request, reply) => {
   }
 })
 
-const main = async () => {
-  try {
-    const config = await configStorage.load()
-    const ecsScheduleActions = config.ecsItems.map((x) => new EcsScheduleAction(ecsService, x))
-    const rdsScheduleActions = config.rdsItems.map((x) => new RdsScheduleAction(rdsService, x))
-    const allScheduleActions = [...ecsScheduleActions, ...rdsScheduleActions]
-    const scheduler = new Scheduler(allScheduleActions, manualOperationStorage)
+try {
+  const config = await configStorage.load()
+  const ecsScheduleActions = config.ecsItems.map((x) => new EcsScheduleAction(ecsService, x))
+  const rdsScheduleActions = config.rdsItems.map((x) => new RdsScheduleAction(rdsService, x))
+  const allScheduleActions = [...ecsScheduleActions, ...rdsScheduleActions]
+  const scheduler = new Scheduler(allScheduleActions, manualOperationStorage)
 
-    await scheduler.startScheduler()
-    console.log('ECS and RDS scheduler initialized successfully')
+  await scheduler.startScheduler()
+  console.log('ECS and RDS scheduler initialized successfully')
 
-    await fastify.listen({ port: 3000, host: '0.0.0.0' })
-    console.log('Server listening on port 3000')
-  } catch (err) {
-    fastify.log.error(err)
-    process.exit(1)
-  }
+  await fastify.listen({ port: 3000, host: '0.0.0.0' })
+  console.log('Server listening on port 3000')
+} catch (err) {
+  fastify.log.error(err)
+  process.exit(1)
 }
-
-main()

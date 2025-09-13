@@ -263,17 +263,6 @@ export function App() {
                   />
                 </label>
               </div>
-              <div style={{ marginBottom: '10px' }}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={delayFormData.isIndefinite}
-                    onChange={(e) => setDelayFormData(prev => ({ ...prev, isIndefinite: e.target.checked }))}
-                    disabled={operationLoading}
-                  />
-                  無期限（手動解除まで起動状態を維持）
-                </label>
-              </div>
               <div style={{ marginBottom: '15px' }}>
                 <label>
                   停止日時:
@@ -285,6 +274,17 @@ export function App() {
                     disabled={operationLoading || delayFormData.isIndefinite}
                     required={!delayFormData.isIndefinite}
                   />
+                </label>
+              </div>
+              <div style={{ marginBottom: '10px' }}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={delayFormData.isIndefinite}
+                    onChange={(e) => setDelayFormData(prev => ({ ...prev, isIndefinite: e.target.checked }))}
+                    disabled={operationLoading}
+                  />
+                  停止しない（手動解除まで起動状態を維持）
                 </label>
               </div>
               <div>
