@@ -172,7 +172,7 @@ export class ManualOperationController {
       requester
     }
 
-    // サービスを起動（遅延停止なので起動状態にする）
+    // サービスを起動
     await this.startAllServices()
 
     // データを保存
