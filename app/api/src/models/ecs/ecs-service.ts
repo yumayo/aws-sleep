@@ -58,6 +58,13 @@ export class EcsService {
 
   async updateServiceDesiredCount(clusterName: string, serviceName: string, desiredCount: number): Promise<void> {
     try {
+      const currentDesiredCount = await this.getServiceDesiredCount(clusterName, serviceName)
+
+      if (currentDesiredCount === desiredCount) {
+        console.log(`ECS Service ${serviceName} already has desired count ${desiredCount}, skipping update`)
+        return
+      }
+
       const command = new UpdateServiceCommand({
         cluster: clusterName,
         service: serviceName,
