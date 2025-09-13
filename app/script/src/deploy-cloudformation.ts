@@ -83,6 +83,28 @@ function getParametersForTemplate(templateFile: string, config: Config): Paramet
         ParameterValue: config.vpc.subnets.map(subnet => subnet.subnetId).join(',')
       }
     ];
+  } else if (fileName === 'rds-aurora-sample.yml') {
+    // RDS AuroraクラスターにはVPCとSubnetパラメータ、およびMasterPasswordが必要
+    const masterPassword = process.env.APP_RDS_ROOT_PASSWORD;
+    // const snapshotIdentifier = process.env.APP_RDS_SNAPSHOT_IDENTIFIER;
+    return [
+      {
+        ParameterKey: 'VpcId',
+        ParameterValue: config.vpc.vpcId
+      },
+      {
+        ParameterKey: 'SubnetIds',
+        ParameterValue: config.vpc.subnets.map(subnet => subnet.subnetId).join(',')
+      },
+      {
+        ParameterKey: 'MasterPassword',
+        ParameterValue: masterPassword
+      },
+      // {
+      //   ParameterKey: 'SnapshotIdentifier',
+      //   ParameterValue: snapshotIdentifier
+      // }
+    ];
   }
   
   // その他のテンプレート（ecr-repository.yml、ecs-execution-role.yml等）はパラメータ不要

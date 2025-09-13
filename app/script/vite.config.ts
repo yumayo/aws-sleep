@@ -2,6 +2,11 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [],
+
+  // デフォルトだとprocess.envは見れないため修正。
+  define: {
+    'process.env': 'process.env'
+  },
   build: {
     target: 'node22',
     rollupOptions: {

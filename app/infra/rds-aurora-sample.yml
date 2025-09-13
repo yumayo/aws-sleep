@@ -1,0 +1,101 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+
+  DatabaseName:
+    Type: String
+    Default: sampledb
+
+  MasterUsername:
+    Type: String
+    Default: root
+
+  MasterPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+
+  # SnapshotIdentifier:
+  #   Type: String
+  #   Default: ""
+
+Resources:
+  # DB Subnet Group
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: '-'
+      SubnetIds: !Ref SubnetIds
+
+  # Security Group for Aurora
+  AuroraSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: '-'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 10.0.0.0/16
+
+  # Aurora Cluster
+  AuroraCluster:
+    Type: AWS::RDS::DBCluster
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      Engine: aurora-mysql
+      DatabaseName: !Ref DatabaseName
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterPassword
+      VpcSecurityGroupIds:
+        - !Ref AuroraSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      # SnapshotIdentifier: !Ref SnapshotIdentifier
+
+  # Aurora DB Instance 1
+  AuroraInstance1:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: aurora-sample-instance-1
+      DBClusterIdentifier: !Ref AuroraCluster
+      DBInstanceClass: db.t3.medium
+      Engine: aurora-mysql
+      PubliclyAccessible: false
+
+  # Aurora DB Instance 2
+  AuroraInstance2:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: aurora-sample-instance-2
+      DBClusterIdentifier: !Ref AuroraCluster
+      DBInstanceClass: db.t3.medium
+      Engine: aurora-mysql
+      PubliclyAccessible: false
+
+Outputs:
+  ClusterIdentifier:
+    Value: !Ref AuroraCluster
+    Export:
+      Name: AuroraClusterIdentifier
+
+  ClusterEndpoint:
+    Value: !GetAtt AuroraCluster.Endpoint.Address
+    Export:
+      Name: AuroraClusterEndpoint
+
+  ClusterPort:
+    Value: !GetAtt AuroraCluster.Endpoint.Port
+    Export:
+      Name: AuroraClusterPort
+
+  DatabaseName:
+    Value: !Ref DatabaseName
+    Export:
+      Name: AuroraDatabaseName

@@ -35,6 +35,12 @@ npm run deploy-cloudformation ecs-sample.yml my-ecs-stack vpc-12345 subnet-abc s
 npm run deploy-cloudformation /app/app/infra/ecs-sample.yml ecs-test-stack vpc-0123456789abcdef0 subnet-0123456789abcdef0 subnet-0fedcba9876543210
 ```
 
+## RDSのパスワード生成コマンド
+
+```sh
+npm run dev generate-rds-password
+```
+
 ## 必要な環境変数
 
 ```bash
