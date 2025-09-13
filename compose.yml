@@ -71,7 +71,7 @@ services:
       - "5173"
       - "3000"
     env_file:
-      - env/.env
+      - env/api/.env
     user: ubuntu
     tty: true
     stop_grace_period: 0s
