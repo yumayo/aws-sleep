@@ -51,6 +51,10 @@ export function App() {
   }
 
   const startAll = async () => {
+    if (!confirm('全サービスを起動しますか？')) {
+      return
+    }
+
     try {
       setOperationLoading(true)
       setError(null)
@@ -73,6 +77,10 @@ export function App() {
   }
 
   const stopAll = async () => {
+    if (!confirm('全サービスを停止しますか？')) {
+      return
+    }
+
     try {
       setOperationLoading(true)
       setError(null)
