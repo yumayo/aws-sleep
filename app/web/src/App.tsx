@@ -105,7 +105,7 @@ export function App() {
   const requestStart = () => {
     const now = new Date()
     const defaultTime = new Date(now.getTime() + 60 * 60 * 1000) // 1時間後
-    
+
     // datetime-local用のフォーマット (YYYY-MM-DDTHH:mm)
     const year = defaultTime.getFullYear()
     const month = String(defaultTime.getMonth() + 1).padStart(2, '0')
@@ -113,7 +113,7 @@ export function App() {
     const hours = String(defaultTime.getHours()).padStart(2, '0')
     const minutes = String(defaultTime.getMinutes()).padStart(2, '0')
     const defaultTimeString = `${year}-${month}-${day}T${hours}:${minutes}`
-    
+
     setDelayFormData({
       requester: '',
       scheduledDate: defaultTimeString,
@@ -124,12 +124,12 @@ export function App() {
 
   const submitStartRequest = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!delayFormData.requester.trim()) {
       alert('申請者名を入力してください')
       return
     }
-    
+
     if (!delayFormData.isIndefinite && !delayFormData.scheduledDate) {
       alert('サーバーの停止日時を入力してください')
       return
@@ -137,7 +137,7 @@ export function App() {
 
     const now = new Date()
     let scheduledDate: Date | null = null
-    
+
     if (!delayFormData.isIndefinite) {
       scheduledDate = new Date(delayFormData.scheduledDate)
       if (isNaN(scheduledDate.getTime()) || scheduledDate <= now) {
@@ -161,7 +161,7 @@ export function App() {
       const response = await fetch('/api/start-manual-mode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           requester: delayFormData.requester.trim(),
           scheduledDate: scheduledDate ? scheduledDate.toISOString() : null
         })
@@ -231,140 +231,153 @@ export function App() {
       <h1>AWS リソース ダッシュボード</h1>
 
       <section>
+        <div style={{ backgroundColor: '#ccffff', padding: '10px', margin: '10px 0', border: '1px solid #00cccc' }}>
+          <p>
+            平日は指定された時刻に自動的に起動し、夜間に停止されます。<br />
+            土日・祝は終日サーバーを自動的に停止します。<br />
+          </p>
+        </div>
+      </section>
+
+      <section>
         <div style={{ backgroundColor: '#ffffcc', padding: '10px', margin: '10px 0', border: '1px solid #cccc00' }}>
-        <h2>マニュアルモード</h2>
-        <p>
-          マニュアルモード中はサーバーの自動起動と自動停止を行わなくなります。<br/>
-          早朝の勤務や残業、休日に出勤された場合に使用することを想定しています。<br/>
-        </p>
-        <strong>{delayStatus?.isActive ? '現在はマニュアルモード中です。' : '現在はマニュアルモードではありません。'}</strong>
-        <p>マニュアルモードモード申請者: {delayStatus?.requester || '-'}</p>
-        <p>マニュアルモードモード申請日時: {delayStatus?.requestedAt ? new Date(delayStatus.requestedAt).toLocaleString('ja-JP') : '-'}</p>
-        <p>マニュアルモードモード解除予定日時: {delayStatus?.scheduledStopAt ? new Date(delayStatus.scheduledStopAt).toLocaleString('ja-JP') : '-'}</p>
-        <div>
-          <button onClick={requestStart} disabled={operationLoading || showDelayForm}>
-            サーバーを起動する
-          </button>
-        </div>
-        {showDelayForm && (
-          <div style={{ backgroundColor: '#f0f8ff', padding: '15px', margin: '10px 0', border: '2px solid #4169e1', borderRadius: '5px' }}>
-            <h3>起動申請</h3>
-            <form onSubmit={submitStartRequest}>
-              <div style={{ marginBottom: '10px' }}>
-                <label>
-                  申請者名:
-                  <input
-                    type="text"
-                    value={delayFormData.requester}
-                    onChange={(e) => setDelayFormData(prev => ({ ...prev, requester: e.target.value }))}
-                    style={{ marginLeft: '10px', padding: '5px', width: '200px' }}
-                    disabled={operationLoading}
-                    required
-                  />
-                </label>
-              </div>
-              <div style={{ marginBottom: '15px' }}>
-                <label>
-                  停止日時:
-                  <input
-                    type="datetime-local"
-                    value={delayFormData.scheduledDate}
-                    onChange={(e) => setDelayFormData(prev => ({ ...prev, scheduledDate: e.target.value }))}
-                    style={{ marginLeft: '10px', padding: '5px' }}
-                    disabled={operationLoading || delayFormData.isIndefinite}
-                    required={!delayFormData.isIndefinite}
-                  />
-                </label>
-              </div>
-              <div style={{ marginBottom: '10px' }}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={delayFormData.isIndefinite}
-                    onChange={(e) => setDelayFormData(prev => ({ ...prev, isIndefinite: e.target.checked }))}
-                    disabled={operationLoading}
-                  />
-                  停止しない（手動解除まで起動状態を維持）
-                </label>
-              </div>
-              <div>
-                <button type="submit" disabled={operationLoading} style={{ marginRight: '10px' }}>
-                  申請する
-                </button>
-                <button type="button" onClick={cancelStartForm} disabled={operationLoading}>
-                  キャンセル
-                </button>
-              </div>
-            </form>
+          <h2>マニュアルモード</h2>
+          <p>
+            マニュアルモード中はサーバーの自動起動と自動停止を行わなくなります。<br />
+            早朝の勤務や残業、休日に出勤された場合に使用することを想定しています。<br />
+          </p>
+          <strong>{delayStatus?.isActive ? '現在はマニュアルモード中です。' : '現在はマニュアルモードではありません。'}</strong>
+          <p>マニュアルモードモード申請者: {delayStatus?.requester || '-'}</p>
+          <p>マニュアルモードモード申請日時: {delayStatus?.requestedAt ? new Date(delayStatus.requestedAt).toLocaleString('ja-JP') : '-'}</p>
+          <p>マニュアルモードモード解除予定日時: {delayStatus?.scheduledStopAt ? new Date(delayStatus.scheduledStopAt).toLocaleString('ja-JP') : '-'}</p>
+          <div>
+            <button onClick={requestStart} disabled={operationLoading || showDelayForm}>
+              サーバーを起動する
+            </button>
           </div>
-        )}
-        <div>
-          <button onClick={stopAll} disabled={operationLoading}>
-            サーバーを停止する
-          </button>
+          {showDelayForm && (
+            <div style={{ backgroundColor: '#f0f8ff', padding: '15px', margin: '10px 0', border: '2px solid #4169e1', borderRadius: '5px' }}>
+              <h3>起動申請</h3>
+              <form onSubmit={submitStartRequest}>
+                <div style={{ marginBottom: '10px' }}>
+                  <label>
+                    申請者名:
+                    <input
+                      type="text"
+                      value={delayFormData.requester}
+                      onChange={(e) => setDelayFormData(prev => ({ ...prev, requester: e.target.value }))}
+                      style={{ marginLeft: '10px', padding: '5px', width: '200px' }}
+                      disabled={operationLoading}
+                      required
+                    />
+                  </label>
+                </div>
+                <div style={{ marginBottom: '15px' }}>
+                  <label>
+                    停止日時:
+                    <input
+                      type="datetime-local"
+                      value={delayFormData.scheduledDate}
+                      onChange={(e) => setDelayFormData(prev => ({ ...prev, scheduledDate: e.target.value }))}
+                      style={{ marginLeft: '10px', padding: '5px' }}
+                      disabled={operationLoading || delayFormData.isIndefinite}
+                      required={!delayFormData.isIndefinite}
+                    />
+                  </label>
+                </div>
+                <div style={{ marginBottom: '10px' }}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={delayFormData.isIndefinite}
+                      onChange={(e) => setDelayFormData(prev => ({ ...prev, isIndefinite: e.target.checked }))}
+                      disabled={operationLoading}
+                    />
+                    停止しない（手動解除まで起動状態を維持）
+                  </label>
+                </div>
+                <div>
+                  <button type="submit" disabled={operationLoading} style={{ marginRight: '10px' }}>
+                    申請する
+                  </button>
+                  <button type="button" onClick={cancelStartForm} disabled={operationLoading}>
+                    キャンセル
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+          <div>
+            <button onClick={stopAll} disabled={operationLoading}>
+              サーバーを停止する
+            </button>
+          </div>
+          <div>
+            <button onClick={cancelDelay} disabled={operationLoading || !delayStatus?.isActive}>
+              マニュアルモードを解除する
+            </button>
+          </div>
         </div>
-        <div>
-          <button onClick={cancelDelay} disabled={operationLoading || !delayStatus?.isActive}>
-            マニュアルモードを解除する
-          </button>
-        </div>
-      </div>
       </section>
 
       <section>
-        <h2>ECS サービス</h2>
-        <table border={1}>
-          <thead>
-            <tr>
-              <th>クラスター名</th>
-              <th>サービス名</th>
-              <th>希望台数</th>
-              <th>実行中</th>
-              <th>開始中</th>
-              <th>開始時刻</th>
-              <th>停止時刻</th>
-              <th>状態</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ecsServices.map((service, index) => (
-              <tr key={index}>
-                <td>{service.clusterName}</td>
-                <td>{service.serviceName}</td>
-                <td>{service.desiredCount}</td>
-                <td>{service.runningCount}</td>
-                <td>{service.pendingCount}</td>
-                <td>{service.startDate}</td>
-                <td>{service.stopDate}</td>
-                <td>{service.status}</td>
+        <div style={{ backgroundColor: '#ffffcc', padding: '10px', margin: '10px 0', border: '1px solid #cccc00' }}>
+          <h2>ECS サービス</h2>
+          <table border={1}>
+            <thead>
+              <tr>
+                <th>クラスター名</th>
+                <th>サービス名</th>
+                <th>希望台数</th>
+                <th>実行中</th>
+                <th>開始中</th>
+                <th>開始時刻</th>
+                <th>停止時刻</th>
+                <th>状態</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {ecsServices.map((service, index) => (
+                <tr key={index}>
+                  <td>{service.clusterName}</td>
+                  <td>{service.serviceName}</td>
+                  <td>{service.desiredCount}</td>
+                  <td>{service.runningCount}</td>
+                  <td>{service.pendingCount}</td>
+                  <td>{service.startDate}</td>
+                  <td>{service.stopDate}</td>
+                  <td>{service.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section>
-        <h2>RDS クラスター</h2>
-        <table border={1}>
-          <thead>
-            <tr>
-              <th>クラスター名</th>
-              <th>開始時刻</th>
-              <th>停止時刻</th>
-              <th>状態</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rdsClusters.map((cluster, index) => (
-              <tr key={index}>
-                <td>{cluster.clusterName}</td>
-                <td>{cluster.startDate}</td>
-                <td>{cluster.stopDate}</td>
-                <td>{cluster.status}</td>
+        <div style={{ backgroundColor: '#ffffcc', padding: '10px', margin: '10px 0', border: '1px solid #cccc00' }}>
+          <h2>RDS クラスター</h2>
+          <table border={1}>
+            <thead>
+              <tr>
+                <th>クラスター名</th>
+                <th>開始時刻</th>
+                <th>停止時刻</th>
+                <th>状態</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rdsClusters.map((cluster, index) => (
+                <tr key={index}>
+                  <td>{cluster.clusterName}</td>
+                  <td>{cluster.startDate}</td>
+                  <td>{cluster.stopDate}</td>
+                  <td>{cluster.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <div>
