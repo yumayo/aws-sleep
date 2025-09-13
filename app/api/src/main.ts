@@ -6,10 +6,10 @@ import { getHealth } from './controllers/health-controller'
 import { SchedulerController } from './controllers/schedule-controller'
 import { DelayedStopDataStorage } from './models/delayed-stop-data-storage'
 import { ConfigStorage } from './models/config-storage'
-import { EcsService } from './models/ecs-service'
-import { EcsDesiredCountStorage } from './models/ecs-desired-count-storage'
+import { EcsService } from './models/ecs/ecs-service'
+import { EcsDesiredCountStorage } from './models/ecs/ecs-desired-count-storage'
 import { Scheduler } from './models/scheduler'
-import { EcsScheduleAction } from './models/ecs-schedule-action'
+import { EcsScheduleAction } from './models/ecs/ecs-schedule-action'
 
 const fastify = Fastify({
   logger: true

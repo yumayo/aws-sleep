@@ -1,4 +1,4 @@
-import { Schedule, ScheduleAction, ScheduleConfigEcsItem } from "../types/scheduler-types"
+import { Schedule, ScheduleAction, ScheduleConfigEcsItem } from "../../types/scheduler-types"
 import { EcsService } from "./ecs-service"
 
 export class EcsScheduleAction implements ScheduleAction {
