@@ -1,14 +1,53 @@
 import { ManualOperationData, ManualOperationType } from '../types/scheduler-types'
 import { ManualOperationStorage } from '../models/manual-operation-storage'
 import { ConfigStorage } from '../models/config-storage'
+import { EcsService } from '../models/ecs/ecs-service'
+import { RdsService } from '../models/rds/rds-service'
 
 export class ManualOperationController {
   private readonly manualOperationStorage: ManualOperationStorage
   private readonly configStorage: ConfigStorage
+  private readonly ecsService: EcsService
+  private readonly rdsService: RdsService
 
-  constructor(manualOperationStorage: ManualOperationStorage, configStorage: ConfigStorage) {
+  constructor(
+    manualOperationStorage: ManualOperationStorage, 
+    configStorage: ConfigStorage,
+    ecsService: EcsService,
+    rdsService: RdsService
+  ) {
     this.manualOperationStorage = manualOperationStorage
     this.configStorage = configStorage
+    this.ecsService = ecsService
+    this.rdsService = rdsService
+  }
+
+  // ECSとRDSを起動
+  private async startAllServices(): Promise<void> {
+    console.log('Starting all ECS and RDS services')
+    const config = await this.configStorage.load()
+    await Promise.all([
+      ...config.ecsItems.map(ecs =>
+        this.ecsService.startService(ecs.clusterName, ecs.serviceName)
+      ),
+      ...config.rdsItems.map(rds =>
+        this.rdsService.startCluster(rds.clusterName)
+      )
+    ])
+  }
+
+  // ECSとRDSを停止
+  private async stopAllServices(): Promise<void> {
+    console.log('Stopping all ECS and RDS services')
+    const config = await this.configStorage.load()
+    await Promise.all([
+      ...config.ecsItems.map(ecs =>
+        this.ecsService.stopService(ecs.clusterName, ecs.serviceName)
+      ),
+      ...config.rdsItems.map(rds =>
+        this.rdsService.stopCluster(rds.clusterName)
+      )
+    ])
   }
 
   // マニュアル起動申請
@@ -33,6 +72,9 @@ export class ManualOperationController {
       requestTime: now,
       requester
     }
+
+    // サービスを起動
+    await this.startAllServices()
 
     // データを保存
     await this.manualOperationStorage.save(operationData)
@@ -75,6 +117,9 @@ export class ManualOperationController {
       requester
     }
 
+    // サービスを停止
+    await this.stopAllServices()
+
     // データを保存
     await this.manualOperationStorage.save(operationData)
     console.log('Saved manual stop operation:', operationData)
@@ -94,7 +139,7 @@ export class ManualOperationController {
   }
 
   // 遅延停止申請
-  async requestDelayedStop(requester?: string): Promise<{
+  async requestDelayedStop(requester: string | null | undefined, scheduledTime: Date): Promise<{
     success: boolean,
     message: string,
     scheduledTime?: Date,
@@ -116,7 +161,9 @@ export class ManualOperationController {
       requester = 'anonymous'
     }
 
-    const scheduledTime = new Date(now.getTime() + config.delayHour * 60 * 60 * 1000)
+    if (scheduledTime <= now) {
+      throw new Error('Scheduled time must be in the future')
+    }
 
     const operationData: ManualOperationData = {
       operationType: 'delayed-stop',
@@ -124,6 +171,9 @@ export class ManualOperationController {
       scheduledTime,
       requester
     }
+
+    // サービスを起動（遅延停止なので起動状態にする）
+    await this.startAllServices()
 
     // データを保存
     await this.manualOperationStorage.save(operationData)

@@ -34,7 +34,7 @@ const ecsDesiredCountStorage = new EcsDesiredCountStorage()
 const ecsService = new EcsService(ecsClient, ecsDesiredCountStorage)
 const rdsService = new RdsService(rdsClient)
 const manualOperationStorage = new ManualOperationStorage()
-const manualOperationController = new ManualOperationController(manualOperationStorage, configStorage)
+const manualOperationController = new ManualOperationController(manualOperationStorage, configStorage, ecsService, rdsService)
 
 fastify.get('/ecs/status', async (_request, reply) => {
   try {
@@ -80,15 +80,8 @@ fastify.post('/ecs/start', async (request, reply) => {
     const body = request.body as { requester?: string }
     console.log('Manual start: Starting ECS services')
 
-    // マニュアル起動モードを設定
     const manualResult = await manualOperationController.requestManualStart(body?.requester)
 
-    const config = await configStorage.load()
-    await Promise.all(
-      config.ecsItems.map(ecs =>
-        ecsService.startService(ecs.clusterName, ecs.serviceName)
-      )
-    )
     return {
       status: 'success',
       message: 'ECS services start requested (manual mode activated)',
@@ -105,15 +98,8 @@ fastify.post('/ecs/stop', async (request, reply) => {
     const body = request.body as { requester?: string }
     console.log('Manual stop: Stopping ECS services')
 
-    // マニュアル停止モードを設定
     const manualResult = await manualOperationController.requestManualStop(body?.requester)
 
-    const config = await configStorage.load()
-    await Promise.all(
-      config.ecsItems.map(ecs =>
-        ecsService.stopService(ecs.clusterName, ecs.serviceName)
-      )
-    )
     return {
       status: 'success',
       message: 'ECS services stop requested (manual mode activated)',
@@ -130,15 +116,8 @@ fastify.post('/rds/start', async (request, reply) => {
     const body = request.body as { requester?: string }
     console.log('Manual start: Starting RDS clusters')
 
-    // マニュアル起動モードを設定（RDSの場合もECSと同じマニュアルモードを共有）
     const manualResult = await manualOperationController.requestManualStart(body?.requester)
 
-    const config = await configStorage.load()
-    await Promise.all(
-      config.rdsItems.map(rds =>
-        rdsService.startCluster(rds.clusterName)
-      )
-    )
     return {
       status: 'success',
       message: 'RDS clusters start requested (manual mode activated)',
@@ -155,15 +134,8 @@ fastify.post('/rds/stop', async (request, reply) => {
     const body = request.body as { requester?: string }
     console.log('Manual stop: Stopping RDS clusters')
 
-    // マニュアル停止モードを設定（RDSの場合もECSと同じマニュアルモードを共有）
     const manualResult = await manualOperationController.requestManualStop(body?.requester)
 
-    const config = await configStorage.load()
-    await Promise.all(
-      config.rdsItems.map(rds =>
-        rdsService.stopCluster(rds.clusterName)
-      )
-    )
     return {
       status: 'success',
       message: 'RDS clusters stop requested (manual mode activated)',
@@ -178,8 +150,9 @@ fastify.post('/rds/stop', async (request, reply) => {
 // 遅延停止申請
 fastify.post('/delay-stop', async (request, _reply) => {
   try {
-    const body = request.body as { requester?: string }
-    const result = await manualOperationController.requestDelayedStop(body?.requester)
+    const body = request.body as { requester?: string, scheduledDate: string }
+
+    const result = await manualOperationController.requestDelayedStop(body?.requester, new Date(body?.scheduledDate))
 
     if (!result.success) {
       _reply.code(409) // Conflict
