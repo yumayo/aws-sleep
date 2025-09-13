@@ -1,13 +1,16 @@
 import { ScheduleAction } from '../types/scheduler-types'
 import { ScheduleStateCalculator } from './schedule-state-calculator'
+import { ManualOperationStorage } from './manual-operation-storage'
 
 export class Scheduler {
   private readonly scheduleActions: ScheduleAction[]
+  private readonly manualOperationStorage: ManualOperationStorage
   private intervalId: NodeJS.Timeout | null = null
   private lastExecutionTime: Date | null = null
 
-  constructor(scheduleActions: ScheduleAction[]) {
+  constructor(scheduleActions: ScheduleAction[], manualOperationStorage: ManualOperationStorage) {
     this.scheduleActions = scheduleActions
+    this.manualOperationStorage = manualOperationStorage
   }
 
   async startScheduler(): Promise<void> {
@@ -49,6 +52,17 @@ export class Scheduler {
   async update(startTime: Date, endTime: Date): Promise<void> {
     console.log('Calculating schedule actions...')
     console.log(`Time range: ${startTime.toISOString()} - ${endTime.toISOString()}`)
+
+    // 期限切れの遅延停止をチェックしてクリア
+    await this.manualOperationStorage.checkAndClearExpiredDelayedStop()
+
+    // マニュアルモードチェック
+    const isManualModeActive = await this.manualOperationStorage.isManualModeActive()
+    if (isManualModeActive) {
+      const manualOperation = await this.manualOperationStorage.load()
+      console.log(`Manual mode active - scheduler skipped (operation: ${manualOperation?.operationType})`)
+      return
+    }
 
     for (const scheduleAction of this.scheduleActions) {
       const schedule = scheduleAction.getSchedule()

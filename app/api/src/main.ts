@@ -4,8 +4,8 @@ import cors from '@fastify/cors'
 import { ECSClient } from '@aws-sdk/client-ecs'
 import { RDSClient } from '@aws-sdk/client-rds'
 import { getHealth } from './controllers/health-controller'
-import { SchedulerController } from './controllers/schedule-controller'
-import { DelayedStopDataStorage } from './models/delayed-stop-data-storage'
+import { ManualOperationController } from './controllers/manual-operation-controller'
+import { ManualOperationStorage } from './models/manual-operation-storage'
 import { ConfigStorage } from './models/config-storage'
 import { EcsService } from './models/ecs/ecs-service'
 import { EcsDesiredCountStorage } from './models/ecs/ecs-desired-count-storage'
@@ -33,8 +33,8 @@ const rdsClient = new RDSClient({region: config.awsRegion})
 const ecsDesiredCountStorage = new EcsDesiredCountStorage()
 const ecsService = new EcsService(ecsClient, ecsDesiredCountStorage)
 const rdsService = new RdsService(rdsClient)
-const delayedStopStorage = new DelayedStopDataStorage()
-const schedulerController = new SchedulerController(delayedStopStorage, configStorage)
+const manualOperationStorage = new ManualOperationStorage()
+const manualOperationController = new ManualOperationController(manualOperationStorage, configStorage)
 
 fastify.get('/api/ecs/status', async (_request, reply) => {
   try {
@@ -75,64 +75,100 @@ fastify.get('/api/rds/status', async (_request, reply) => {
   }
 })
 
-fastify.post('/api/ecs/start', async (_request, reply) => {
+fastify.post('/api/ecs/start', async (request, reply) => {
   try {
-    console.log('Manual test: Starting ECS services')
+    const body = request.body as { requester?: string }
+    console.log('Manual start: Starting ECS services')
+
+    // マニュアル起動モードを設定
+    const manualResult = await manualOperationController.requestManualStart(body?.requester)
+
     const config = await configStorage.load()
     await Promise.all(
-      config.ecsItems.map(ecs => 
+      config.ecsItems.map(ecs =>
         ecsService.startService(ecs.clusterName, ecs.serviceName)
       )
     )
-    return { status: 'success', message: 'ECS services start requested' }
+    return {
+      status: 'success',
+      message: 'ECS services start requested (manual mode activated)',
+      manualOperation: manualResult.operationData
+    }
   } catch (error) {
     reply.code(500)
     return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
   }
 })
 
-fastify.post('/api/ecs/stop', async (_request, reply) => {
+fastify.post('/api/ecs/stop', async (request, reply) => {
   try {
-    console.log('Manual test: Stopping ECS services')
+    const body = request.body as { requester?: string }
+    console.log('Manual stop: Stopping ECS services')
+
+    // マニュアル停止モードを設定
+    const manualResult = await manualOperationController.requestManualStop(body?.requester)
+
     const config = await configStorage.load()
     await Promise.all(
       config.ecsItems.map(ecs =>
         ecsService.stopService(ecs.clusterName, ecs.serviceName)
       )
     )
-    return { status: 'success', message: 'ECS services stop requested' }
+    return {
+      status: 'success',
+      message: 'ECS services stop requested (manual mode activated)',
+      manualOperation: manualResult.operationData
+    }
   } catch (error) {
     reply.code(500)
     return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
   }
 })
 
-fastify.post('/api/rds/start', async (_request, reply) => {
+fastify.post('/api/rds/start', async (request, reply) => {
   try {
-    console.log('Manual test: Starting RDS clusters')
+    const body = request.body as { requester?: string }
+    console.log('Manual start: Starting RDS clusters')
+
+    // マニュアル起動モードを設定（RDSの場合もECSと同じマニュアルモードを共有）
+    const manualResult = await manualOperationController.requestManualStart(body?.requester)
+
     const config = await configStorage.load()
     await Promise.all(
       config.rdsItems.map(rds =>
         rdsService.startCluster(rds.clusterName)
       )
     )
-    return { status: 'success', message: 'RDS clusters start requested' }
+    return {
+      status: 'success',
+      message: 'RDS clusters start requested (manual mode activated)',
+      manualOperation: manualResult.operationData
+    }
   } catch (error) {
     reply.code(500)
     return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
   }
 })
 
-fastify.post('/api/rds/stop', async (_request, reply) => {
+fastify.post('/api/rds/stop', async (request, reply) => {
   try {
-    console.log('Manual test: Stopping RDS clusters')
+    const body = request.body as { requester?: string }
+    console.log('Manual stop: Stopping RDS clusters')
+
+    // マニュアル停止モードを設定（RDSの場合もECSと同じマニュアルモードを共有）
+    const manualResult = await manualOperationController.requestManualStop(body?.requester)
+
     const config = await configStorage.load()
     await Promise.all(
       config.rdsItems.map(rds =>
         rdsService.stopCluster(rds.clusterName)
       )
     )
-    return { status: 'success', message: 'RDS clusters stop requested' }
+    return {
+      status: 'success',
+      message: 'RDS clusters stop requested (manual mode activated)',
+      manualOperation: manualResult.operationData
+    }
   } catch (error) {
     reply.code(500)
     return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
@@ -143,12 +179,12 @@ fastify.post('/api/rds/stop', async (_request, reply) => {
 fastify.post('/api/ecs/delay-stop', async (request, _reply) => {
   try {
     const body = request.body as { requester?: string }
-    const result = await schedulerController.requestDelayedStop(body?.requester)
-    
+    const result = await manualOperationController.requestDelayedStop(body?.requester)
+
     if (!result.success) {
       _reply.code(409) // Conflict
     }
-    
+
     return result
   } catch (error) {
     _reply.code(500)
@@ -156,15 +192,15 @@ fastify.post('/api/ecs/delay-stop', async (request, _reply) => {
   }
 })
 
-// 遅延停止申請の取消
+// マニュアルモード解除
 fastify.delete('/api/ecs/delay-stop', async (_request, reply) => {
   try {
-    const result = await schedulerController.cancelDelayedStop()
-    
+    const result = await manualOperationController.cancelManualMode()
+
     if (!result.success) {
       reply.code(404) // Not Found
     }
-    
+
     return result
   } catch (error) {
     reply.code(500)
@@ -172,10 +208,10 @@ fastify.delete('/api/ecs/delay-stop', async (_request, reply) => {
   }
 })
 
-// 遅延停止申請状況確認
+// マニュアルモード状況確認
 fastify.get('/api/ecs/delay-status', async (_request, reply) => {
   try {
-    const status = await schedulerController.getDelayedStopStatus()
+    const status = await manualOperationController.getManualModeStatus()
     return { status: 'success', ...status }
   } catch (error) {
     reply.code(500)
@@ -189,7 +225,7 @@ const main = async () => {
     const ecsScheduleActions = config.ecsItems.map((x) => new EcsScheduleAction(ecsService, x))
     const rdsScheduleActions = config.rdsItems.map((x) => new RdsScheduleAction(rdsService, x))
     const allScheduleActions = [...ecsScheduleActions, ...rdsScheduleActions]
-    const scheduler = new Scheduler(allScheduleActions)
+    const scheduler = new Scheduler(allScheduleActions, manualOperationStorage)
 
     await scheduler.startScheduler()
     console.log('ECS and RDS scheduler initialized successfully')
