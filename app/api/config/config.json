@@ -1,11 +1,24 @@
 {
   "ecsItems": [
     {
-      "clusterName": "example-cluster",
-      "serviceName": "example-service",
+      "clusterName": "sample-cluster",
+      "serviceName": "sample-service-1",
+      "startHour": 9,
+      "stopHour": 21
+    },
+    {
+      "clusterName": "sample-cluster",
+      "serviceName": "sample-service-2",
+      "startHour": 9,
+      "stopHour": 21
+    },
+    {
+      "clusterName": "sample-cluster",
+      "serviceName": "sample-service-3",
       "startHour": 9,
       "stopHour": 21
     }
   ],
-  "awsRegion": "ap-northeast-1"
+  "awsRegion": "ap-northeast-1",
+  "delayHour": 1
 }
