@@ -11,13 +11,13 @@ services:
         - NET_ADMIN
         - NET_RAW
     volumes:
-      - ./:/app
+      - ./:/workspace
       - type: tmpfs
-        target: /app/.claude.local
+        target: /workspace/.claude.local
         tmpfs:
           size: 0
       - type: tmpfs
-        target: /app/env
+        target: /workspace/env
         tmpfs:
           size: 0
 
@@ -38,7 +38,7 @@ services:
       context: .
       dockerfile: docker/script/Dockerfile
     volumes:
-      - ./:/app
+      - ./:/workspace
       - /var/run/docker.sock:/var/run/docker.sock  # ホストのDockerソケット
       - /var/lib/docker:/var/lib/docker            # イメージキャッシュ共有
     env_file:

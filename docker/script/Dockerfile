@@ -53,10 +53,6 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 COPY ./docker/script/install-docker.sh /tmp/install-docker.sh
 RUN bash /tmp/install-docker.sh
 
-# Dockerデーモンを自動起動するスクリプトを作成
-COPY ./docker/script/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
 USER ubuntu
 
-WORKDIR /app
+WORKDIR /workspace
