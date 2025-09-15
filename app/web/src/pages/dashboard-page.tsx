@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from './contexts/auth-context'
-import { LoginForm } from './components/login-form'
 
 interface EcsService {
   clusterName: string
@@ -38,8 +36,12 @@ interface DelayStatusResponse {
   scheduledStopAt?: string
 }
 
-export function App() {
-  const { user, loading: authLoading, logout } = useAuth()
+interface DashboardPageProps {
+  user: { username: string }
+  logout: () => void
+}
+
+export function DashboardPage({ user, logout }: DashboardPageProps) {
   const [ecsServices, setEcsServices] = useState<EcsService[]>([])
   const [rdsClusters, setRdsClusters] = useState<RdsCluster[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -78,7 +80,6 @@ export function App() {
     }
   }
 
-
   const stopAll = async () => {
     if (!confirm('全サーバーを停止してマニュアルモードに変更しますか？\n停止申請を行うとサーバーが停止され、手動で解除するまで停止状態を維持します。')) {
       return
@@ -107,9 +108,8 @@ export function App() {
 
   const requestStart = () => {
     const now = new Date()
-    const defaultTime = new Date(now.getTime() + 60 * 60 * 1000) // 1時間後
+    const defaultTime = new Date(now.getTime() + 60 * 60 * 1000)
 
-    // datetime-local用のフォーマット (YYYY-MM-DDTHH:mm)
     const year = defaultTime.getFullYear()
     const month = String(defaultTime.getMonth() + 1).padStart(2, '0')
     const day = String(defaultTime.getDate()).padStart(2, '0')
@@ -149,7 +149,6 @@ export function App() {
       }
     }
 
-    // 確認ダイアログを表示
     const confirmMessage = delayFormData.isIndefinite
       ? `${delayFormData.requester.trim()}さんの名前で無期限起動申請を行いますか？\n起動申請を行うとサーバーが起動され、手動で解除するまで起動状態を維持します。`
       : `${delayFormData.requester.trim()}さんの名前で ${scheduledDate!.toLocaleString('ja-JP')} まで起動申請を行いますか？\n起動申請を行うとサーバーが起動され、指定した時刻まで起動状態を維持します。`
@@ -212,18 +211,15 @@ export function App() {
     }
   }
 
-  useEffect(() => {
-    if (user) {
-      fetchStatus()
-      const interval = setInterval(fetchStatus, 3000)
-      return () => clearInterval(interval)
-    }
-  }, [user])
-
-  // 認証が必要
-  if (authLoading) {
-    return <div style={{ textAlign: 'center', padding: '2rem' }}>読み込み中...</div>
+  const handleDelayFormDataChange = (field: keyof typeof delayFormData, value: string | boolean) => {
+    setDelayFormData(prev => ({ ...prev, [field]: value }))
   }
+
+  useEffect(() => {
+    fetchStatus()
+    const interval = setInterval(fetchStatus, 3000)
+    return () => clearInterval(interval)
+  }, [])
 
   if (error) {
     return (
@@ -231,11 +227,8 @@ export function App() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h1>エラー</h1>
           <div>
-            <span>ログイン中: {user?.username}</span>
-            <button
-              onClick={logout}
-              style={{ marginLeft: '1rem', padding: '0.5rem 1rem' }}
-            >
+            <span>ログイン中: {user.username}</span>
+            <button onClick={logout} style={{ marginLeft: '1rem', padding: '0.5rem 1rem' }}>
               ログアウト
             </button>
           </div>
@@ -244,20 +237,9 @@ export function App() {
           <p><strong>エラー内容:</strong> {error}</p>
         </div>
         <button onClick={fetchStatus} style={{ padding: '0.5rem 1rem' }}>再試行</button>
-        <div style={{ marginTop: '2rem', fontSize: '0.9rem', color: '#666' }}>
-          <p><strong>デバッグ情報:</strong></p>
-          <p>• ECSサービス数: {ecsServices.length}</p>
-          <p>• RDSクラスター数: {rdsClusters.length}</p>
-          <p>• マニュアルモード状態: {delayStatus ? 'データあり' : 'データなし'}</p>
-        </div>
       </div>
     )
   }
-
-  if (!user) {
-    return <LoginForm />
-  }
-
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -308,7 +290,7 @@ export function App() {
                     <input
                       type="text"
                       value={delayFormData.requester}
-                      onChange={(e) => setDelayFormData(prev => ({ ...prev, requester: e.target.value }))}
+                      onChange={(e) => handleDelayFormDataChange('requester', e.target.value)}
                       style={{ marginLeft: '10px', padding: '5px', width: '200px' }}
                       disabled={operationLoading}
                       required
@@ -321,7 +303,7 @@ export function App() {
                     <input
                       type="datetime-local"
                       value={delayFormData.scheduledDate}
-                      onChange={(e) => setDelayFormData(prev => ({ ...prev, scheduledDate: e.target.value }))}
+                      onChange={(e) => handleDelayFormDataChange('scheduledDate', e.target.value)}
                       style={{ marginLeft: '10px', padding: '5px' }}
                       disabled={operationLoading || delayFormData.isIndefinite}
                       required={!delayFormData.isIndefinite}
@@ -333,7 +315,7 @@ export function App() {
                     <input
                       type="checkbox"
                       checked={delayFormData.isIndefinite}
-                      onChange={(e) => setDelayFormData(prev => ({ ...prev, isIndefinite: e.target.checked }))}
+                      onChange={(e) => handleDelayFormDataChange('isIndefinite', e.target.checked)}
                       disabled={operationLoading}
                     />
                     停止しない（手動解除まで起動状態を維持）
@@ -364,62 +346,74 @@ export function App() {
       </section>
 
       <section>
-        <div style={{ backgroundColor: '#ffffcc', padding: '10px', margin: '10px 0', border: '1px solid #cccc00' }}>
-          <h2>ECS サービス</h2>
-          <table border={1}>
-            <thead>
-              <tr>
-                <th>クラスター名</th>
-                <th>サービス名</th>
-                <th>希望台数</th>
-                <th>実行中</th>
-                <th>開始中</th>
-                <th>開始時刻</th>
-                <th>停止時刻</th>
-                <th>状態</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ecsServices.map((service, index) => (
-                <tr key={index}>
-                  <td>{service.clusterName}</td>
-                  <td>{service.serviceName}</td>
-                  <td>{service.desiredCount}</td>
-                  <td>{service.runningCount}</td>
-                  <td>{service.pendingCount}</td>
-                  <td>{service.startDate}</td>
-                  <td>{service.stopDate}</td>
-                  <td>{service.status}</td>
+        <div style={{ backgroundColor: '#f0f8ff', padding: '15px', margin: '10px 0', border: '2px solid #4169e1', borderRadius: '5px' }}>
+          <h2>ECS サービス状態</h2>
+          {ecsServices.length === 0 ? (
+            <p style={{ color: '#666', fontStyle: 'italic' }}>ECSサービス情報を取得中...</p>
+          ) : (
+            <table border={1}>
+              <thead>
+                <tr>
+                  <th>クラスター名</th>
+                  <th>サービス名</th>
+                  <th>希望台数</th>
+                  <th>実行中</th>
+                  <th>開始中</th>
+                  <th>開始時刻</th>
+                  <th>停止時刻</th>
+                  <th>状態</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {ecsServices.map((service, index) => {
+                  return (
+                    <tr key={index}>
+                      <td>{service.clusterName}</td>
+                      <td>{service.serviceName}</td>
+                      <td>{service.desiredCount}</td>
+                      <td>{service.runningCount}</td>
+                      <td>{service.pendingCount}</td>
+                      <td>{service.startDate || '-'}</td>
+                      <td>{service.stopDate || '-'}</td>
+                      <td>{service.status}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </section>
 
       <section>
-        <div style={{ backgroundColor: '#ffffcc', padding: '10px', margin: '10px 0', border: '1px solid #cccc00' }}>
-          <h2>RDS クラスター</h2>
-          <table border={1}>
-            <thead>
-              <tr>
-                <th>クラスター名</th>
-                <th>開始時刻</th>
-                <th>停止時刻</th>
-                <th>状態</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rdsClusters.map((cluster, index) => (
-                <tr key={index}>
-                  <td>{cluster.clusterName}</td>
-                  <td>{cluster.startDate}</td>
-                  <td>{cluster.stopDate}</td>
-                  <td>{cluster.status}</td>
+        <div style={{ backgroundColor: '#f0fff0', padding: '15px', margin: '10px 0', border: '2px solid #32cd32', borderRadius: '5px' }}>
+          <h2>RDS クラスター状態</h2>
+          {rdsClusters.length === 0 ? (
+            <p style={{ color: '#666', fontStyle: 'italic' }}>RDSクラスター情報を取得中...</p>
+          ) : (
+            <table border={1}>
+              <thead>
+                <tr>
+                  <th>クラスター名</th>
+                  <th>開始時刻</th>
+                  <th>停止時刻</th>
+                  <th>状態</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rdsClusters.map((cluster, index) => {
+                  return (
+                    <tr key={index}>
+                      <td>{cluster.clusterName}</td>
+                      <td>{cluster.startDate || '-'}</td>
+                      <td>{cluster.stopDate || '-'}</td>
+                      <td>{cluster.status}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </section>
 
