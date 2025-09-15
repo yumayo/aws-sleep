@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useAuth } from './contexts/auth-context'
+import { LoginForm } from './components/login-form'
 
 interface EcsService {
   clusterName: string
@@ -37,6 +39,7 @@ interface DelayStatusResponse {
 }
 
 export function App() {
+  const { user, loading: authLoading, logout } = useAuth()
   const [ecsServices, setEcsServices] = useState<EcsService[]>([])
   const [rdsClusters, setRdsClusters] = useState<RdsCluster[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -160,7 +163,6 @@ export function App() {
 
       const response = await fetch('/api/start-manual-mode', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           requester: delayFormData.requester.trim(),
           scheduledDate: scheduledDate ? scheduledDate.toISOString() : null
@@ -211,24 +213,65 @@ export function App() {
   }
 
   useEffect(() => {
-    fetchStatus()
-    const interval = setInterval(fetchStatus, 3000)
-    return () => clearInterval(interval)
-  }, [])
+    if (user) {
+      fetchStatus()
+      const interval = setInterval(fetchStatus, 3000)
+      return () => clearInterval(interval)
+    }
+  }, [user])
+
+  // 認証が必要
+  if (authLoading) {
+    return <div style={{ textAlign: 'center', padding: '2rem' }}>読み込み中...</div>
+  }
 
   if (error) {
     return (
-      <div>
-        <h1>エラー</h1>
-        <p>{error}</p>
-        <button onClick={fetchStatus}>再試行</button>
+      <div style={{ padding: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h1>エラー</h1>
+          <div>
+            <span>ログイン中: {user?.username}</span>
+            <button
+              onClick={logout}
+              style={{ marginLeft: '1rem', padding: '0.5rem 1rem' }}
+            >
+              ログアウト
+            </button>
+          </div>
+        </div>
+        <div style={{ backgroundColor: '#ffebee', padding: '1rem', marginBottom: '1rem', borderRadius: '4px' }}>
+          <p><strong>エラー内容:</strong> {error}</p>
+        </div>
+        <button onClick={fetchStatus} style={{ padding: '0.5rem 1rem' }}>再試行</button>
+        <div style={{ marginTop: '2rem', fontSize: '0.9rem', color: '#666' }}>
+          <p><strong>デバッグ情報:</strong></p>
+          <p>• ECSサービス数: {ecsServices.length}</p>
+          <p>• RDSクラスター数: {rdsClusters.length}</p>
+          <p>• マニュアルモード状態: {delayStatus ? 'データあり' : 'データなし'}</p>
+        </div>
       </div>
     )
   }
 
+  if (!user) {
+    return <LoginForm />
+  }
+
   return (
     <div>
-      <h1>AWS リソース ダッシュボード</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h1>AWS リソース ダッシュボード</h1>
+        <div>
+          <span>ログイン中: {user.username}</span>
+          <button
+            onClick={logout}
+            style={{ marginLeft: '1rem', padding: '0.5rem 1rem' }}
+          >
+            ログアウト
+          </button>
+        </div>
+      </div>
 
       <section>
         <div style={{ backgroundColor: '#ccffff', padding: '10px', margin: '10px 0', border: '1px solid #00cccc' }}>
