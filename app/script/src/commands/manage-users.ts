@@ -1,14 +1,13 @@
-import { UserStorage } from '../../api/src/models/auth/user-storage.js'
+import { UserStorage } from '../../../api/src/models/auth/user-storage'
 
-async function main() {
-  const args = process.argv.slice(2)
+export async function manageUsers(args: string[]) {
   const userStorage = new UserStorage()
 
   if (args.length === 0) {
     console.log(`使用方法:
-  ユーザー追加: npm run manage-users -- add <ユーザー名> <パスワード>
-  ユーザー削除: npm run manage-users -- remove <ユーザー名>
-  ユーザー一覧: npm run manage-users -- list`)
+  ユーザー追加: npm run dev manage-users add <ユーザー名> <パスワード>
+  ユーザー削除: npm run dev manage-users remove <ユーザー名>
+  ユーザー一覧: npm run dev manage-users list`)
     process.exit(0)
   }
 
@@ -92,7 +91,3 @@ async function main() {
   }
 }
 
-main().catch(error => {
-  console.error('予期しないエラー:', error)
-  process.exit(1)
-})

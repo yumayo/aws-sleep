@@ -23,28 +23,20 @@ npm run dev
 cd /app/app/script
 
 # 基本的な使用方法
-npm run deploy-cloudformation ecs-sample.yml
+npm run dev deploy-cloudformation ecs-sample.yml
 
 # スタック名を指定
-npm run deploy-cloudformation ecs-sample.yml my-ecs-stack
+npm run dev deploy-cloudformation ecs-sample.yml my-ecs-stack
 
 # VPCとサブネットを指定
-npm run deploy-cloudformation ecs-sample.yml my-ecs-stack vpc-12345 subnet-abc subnet-def
+npm run dev deploy-cloudformation ecs-sample.yml my-ecs-stack vpc-12345 subnet-abc subnet-def
 
 # 完全な例
-npm run deploy-cloudformation /app/app/infra/ecs-sample.yml ecs-test-stack vpc-0123456789abcdef0 subnet-0123456789abcdef0 subnet-0fedcba9876543210
+npm run dev deploy-cloudformation /app/app/infra/ecs-sample.yml ecs-test-stack vpc-0123456789abcdef0 subnet-0123456789abcdef0 subnet-0fedcba9876543210
 ```
 
 ## RDSのパスワード生成コマンド
 
 ```sh
 npm run dev generate-rds-password
-```
-
-## 必要な環境変数
-
-```bash
-export AWS_REGION=ap-northeast-1
-export AWS_ACCESS_KEY_ID=your-access-key
-export AWS_SECRET_ACCESS_KEY=your-secret-key
 ```

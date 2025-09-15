@@ -27,7 +27,7 @@ interface DeployOptions {
 
 export async function deployCloudFormation(args: string[]): Promise<void> {
   if (args.length < 1) {
-    console.error('Usage: deploy-cloudformation <template-file>');
+    console.error('Usage: npm run dev deploy-cloudformation <template-file>');
     process.exit(1);
   }
 

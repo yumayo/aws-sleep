@@ -43,5 +43,5 @@ export async function generateRdsPasswordCommand(): Promise<void> {
   console.log('');
   console.log('To use this password with Aurora deployment:');
   console.log(`export RDS_MASTER_PASSWORD="${password}"`);
-  console.log('npm run deploy-cloudformation ../infra/rds-aurora-sample.yml');
+  console.log('npm run dev deploy-cloudformation ../infra/rds-aurora-sample.yml');
 }
