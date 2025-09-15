@@ -43,8 +43,6 @@ services:
       - /var/lib/docker:/var/lib/docker            # イメージキャッシュ共有
     env_file:
       - env/script/.env
-    environment:
-      - DOCKER_HOST_IP=${DOCKER_HOST_IP?error}
     tty: true
     stop_grace_period: 0s
     privileged: true
