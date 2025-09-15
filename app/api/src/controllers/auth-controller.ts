@@ -2,7 +2,6 @@ import { FastifyRequest, FastifyReply } from 'fastify'
 import { UserStorage } from '../models/auth/user-storage.js'
 import { SessionManager } from '../models/auth/session-manager.js'
 import { AuthMiddleware } from '../middleware/auth-middleware.js'
-import { LoginRequest } from '../types/auth-types.js'
 
 export class AuthController {
   constructor(
@@ -15,7 +14,7 @@ export class AuthController {
     try {
       console.log('ログイン試行開始:', { ip: request.ip, userAgent: request.headers['user-agent'] })
 
-      const { username, password } = request.body as LoginRequest
+      const { username, password } = request.body as { username: string, password: string }
       console.log('ログインリクエスト:', { username, passwordLength: password?.length || 0 })
 
       if (!username || !password) {
