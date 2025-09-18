@@ -182,9 +182,9 @@ fastify.post('/rds/stop', { preHandler: authMiddleware.authenticate }, async (re
 
 fastify.post('/start-manual-mode', { preHandler: authMiddleware.authenticate }, async (request, _reply) => {
   try {
-    const body = request.body as { requester?: string, scheduledDate?: string }
+    const body = request.body as { scheduledDate?: string }
 
-    const result = await manualOperationController.manualStart(body?.requester, body.scheduledDate ? new Date(body.scheduledDate) : undefined)
+    const result = await manualOperationController.manualStart(request.user?.username, body.scheduledDate ? new Date(body.scheduledDate) : undefined)
 
     if (!result.success) {
       _reply.code(409) // Conflict

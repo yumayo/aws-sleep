@@ -56,7 +56,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
   const [delayStatus, setDelayStatus] = useState<DelayStatusResponse | null>(null)
   const [showDelayForm, setShowDelayForm] = useState(false)
   const [delayFormData, setDelayFormData] = useState({
-    requester: '',
     scheduledDate: '',
     isIndefinite: false
   })
@@ -127,7 +126,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     const defaultTimeString = `${year}-${month}-${day}T${hours}:${minutes}`
 
     setDelayFormData({
-      requester: '',
       scheduledDate: defaultTimeString,
       isIndefinite: false
     })
@@ -136,11 +134,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
 
   const submitStartRequest = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!delayFormData.requester.trim()) {
-      alert('申請者名を入力してください')
-      return
-    }
 
     if (!delayFormData.isIndefinite && !delayFormData.scheduledDate) {
       alert('サーバーの停止日時を入力してください')
@@ -159,8 +152,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     }
 
     const confirmMessage = delayFormData.isIndefinite
-      ? `${delayFormData.requester.trim()}さんの名前で無期限起動申請を行いますか？\n起動申請を行うとサーバーが起動され、手動で解除するまで起動状態を維持します。`
-      : `${delayFormData.requester.trim()}さんの名前で ${scheduledDate!.toLocaleString('ja-JP')} まで起動申請を行いますか？\n起動申請を行うとサーバーが起動され、指定した時刻まで起動状態を維持します。`
+      ? `無期限起動申請を行いますか？\n起動申請を行うとサーバーが起動され、手動で解除するまで起動状態を維持します。`
+      : `${scheduledDate!.toLocaleString('ja-JP')} まで起動申請を行いますか？\n起動申請を行うとサーバーが起動され、指定した時刻まで起動状態を維持します。`
     if (!confirm(confirmMessage)) {
       return
     }
@@ -172,7 +165,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       const response = await fetch('/api/start-manual-mode', {
         method: 'POST',
         body: JSON.stringify({
-          requester: delayFormData.requester.trim(),
           scheduledDate: scheduledDate ? scheduledDate.toISOString() : null
         })
       })
@@ -193,7 +185,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
 
   const cancelStartForm = () => {
     setShowDelayForm(false)
-    setDelayFormData({ requester: '', scheduledDate: '', isIndefinite: false })
+    setDelayFormData({ scheduledDate: '', isIndefinite: false })
   }
 
   const cancelDelay = async () => {
@@ -311,19 +303,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
             <div style={{ backgroundColor: '#f0f8ff', padding: '15px', margin: '10px 0', border: '2px solid #4169e1', borderRadius: '5px' }}>
               <h3>起動申請</h3>
               <form onSubmit={submitStartRequest}>
-                <div style={{ marginBottom: '10px' }}>
-                  <label>
-                    申請者名:
-                    <input
-                      type="text"
-                      value={delayFormData.requester}
-                      onChange={(e) => handleDelayFormDataChange('requester', e.target.value)}
-                      style={{ marginLeft: '10px', padding: '5px', width: '200px' }}
-                      disabled={operationLoading}
-                      required
-                    />
-                  </label>
-                </div>
                 <div style={{ marginBottom: '15px' }}>
                   <label>
                     停止日時:
