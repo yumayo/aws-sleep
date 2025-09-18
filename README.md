@@ -28,7 +28,7 @@ npm install
 ```sh
 docker compose up -d
 docker compose exec script bash
-cd /app/app/api
+cd /app/app/web
 npm install
 ```
 
