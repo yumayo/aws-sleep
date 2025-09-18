@@ -20,36 +20,36 @@ nvm install --lts && \
 nvm use --lts && \
 nvm alias default node'
 
-RUN mkdir -p /app && chown -R ubuntu:ubuntu /app
+RUN mkdir -p /workspace && chown -R ubuntu:ubuntu /workspace
 
 # Copy package files and install dependencies
-COPY ./app/web/package*.json /app
+COPY ./app/web/package*.json /workspace/app/web/
 
-RUN chown -R ubuntu:ubuntu /app
+RUN chown -R ubuntu:ubuntu /workspace/app/web
 
 RUN bash -c '\
 [ -s "/home/ubuntu/.nvm/nvm.sh" ] && \
 source "/home/ubuntu/.nvm/nvm.sh" && \
-(cd /app && npm install) \
+(cd /workspace/app/web && npm install) \
 '
 
 # # Copy the rest of the application code
-COPY ./app/web /app
+COPY ./app/web /workspace/app/web
 
 # Build the Vite project
 RUN bash -c '\
 [ -s "/home/ubuntu/.nvm/nvm.sh" ] && \
 source "/home/ubuntu/.nvm/nvm.sh" && \
-(cd /app && npm run build) \
+(cd /workspace/app/web && npm run build) \
 '
 
 COPY ./docker/web/entrypoint.sh /entrypoint.sh
 RUN chown ubuntu:ubuntu /entrypoint.sh && chmod +x /entrypoint.sh
 
-RUN chown -R ubuntu:ubuntu /app
+RUN chown -R ubuntu:ubuntu /workspace
 
 USER ubuntu
 
-WORKDIR /app
+WORKDIR /workspace/app/web
 
 ENTRYPOINT [ "/entrypoint.sh" ]

@@ -20,36 +20,47 @@ nvm install --lts && \
 nvm use --lts && \
 nvm alias default node'
 
-RUN mkdir -p /app && chown -R ubuntu:ubuntu /app
+RUN mkdir -p /workspace && chown -R ubuntu:ubuntu /workspace
+
+# Copy shared lib first
+COPY ./app/lib /workspace/app/lib
+RUN chown -R ubuntu:ubuntu /workspace/app/lib
+
+# Build shared lib
+RUN bash -c '\
+[ -s "/home/ubuntu/.nvm/nvm.sh" ] && \
+source "/home/ubuntu/.nvm/nvm.sh" && \
+(cd /workspace/app/lib && npm install && npm run build) \
+'
 
 # Copy package files and install dependencies
-COPY ./app/api/package*.json /app
+COPY ./app/api/package*.json /workspace/app/api/
 
-RUN chown -R ubuntu:ubuntu /app
+RUN chown -R ubuntu:ubuntu /workspace/app/api
 
 RUN bash -c '\
 [ -s "/home/ubuntu/.nvm/nvm.sh" ] && \
 source "/home/ubuntu/.nvm/nvm.sh" && \
-(cd /app && npm install) \
+(cd /workspace/app/api && npm install) \
 '
 
 # # Copy the rest of the application code
-COPY ./app/api /app
+COPY ./app/api /workspace/app/api
 
 # Build the Vite project
 RUN bash -c '\
 [ -s "/home/ubuntu/.nvm/nvm.sh" ] && \
 source "/home/ubuntu/.nvm/nvm.sh" && \
-(cd /app && npm run build) \
+(cd /workspace/app/api && npm run build) \
 '
 
 COPY ./docker/api/entrypoint.sh /entrypoint.sh
 RUN chown ubuntu:ubuntu /entrypoint.sh && chmod +x /entrypoint.sh
 
-RUN chown -R ubuntu:ubuntu /app
+RUN chown -R ubuntu:ubuntu /workspace
 
 USER ubuntu
 
-WORKDIR /app
+WORKDIR /workspace/app/api
 
 ENTRYPOINT [ "/entrypoint.sh" ]
