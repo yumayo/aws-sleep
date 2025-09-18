@@ -14,7 +14,8 @@
 			"Action": [
 				"rds:StartDBCluster",
 				"rds:StopDBCluster",
-				"rds:DescribeDBClusters"
+				"rds:DescribeDBClusters",
+				"rds:DescribeDBInstances"
 			],
 			"Resource": "*"
 		}

@@ -1,7 +1,7 @@
 import { UserStorage } from '../../../api/src/models/auth/user-storage'
 
 export async function manageUsers(args: string[]) {
-  const userStorage = new UserStorage()
+  const userStorage = new UserStorage('/workspace/app/api/data')
 
   if (args.length === 0) {
     console.log(`使用方法:

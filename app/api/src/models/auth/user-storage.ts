@@ -5,8 +5,8 @@ import { PasswordHash } from './password-hash.js'
 export class UserStorage {
   private storage: JsonStorage<{ users: User[] }>
 
-  constructor() {
-    this.storage = new JsonStorage('users.json')
+  constructor(dataDir: string) {
+    this.storage = new JsonStorage('users.json', dataDir)
   }
 
   async findUserByUsername(username: string): Promise<User | null> {

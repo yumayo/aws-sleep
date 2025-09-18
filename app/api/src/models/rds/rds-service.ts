@@ -1,4 +1,4 @@
-import { RDSClient, StartDBClusterCommand, StopDBClusterCommand, DescribeDBClustersCommand } from '@aws-sdk/client-rds'
+import { RDSClient, StartDBClusterCommand, StopDBClusterCommand, DescribeDBClustersCommand, DescribeDBInstancesCommand } from '@aws-sdk/client-rds'
 
 export class RdsService {
   private readonly client: RDSClient
@@ -75,6 +75,61 @@ export class RdsService {
       }
 
       return cluster.Status
+    } catch (error) {
+      console.error(`Failed to get RDS cluster ${clusterName} info:`, error)
+      throw error
+    }
+  }
+
+  async getClusterInfo(clusterName: string): Promise<{
+    clusterStatus: string | undefined
+    instances: Array<{
+      instanceName: string
+      status: string | undefined
+    }>
+  }> {
+    try {
+      const clusterCommand = new DescribeDBClustersCommand({
+        DBClusterIdentifier: clusterName
+      })
+
+      const clusterResponse = await this.client.send(clusterCommand)
+      const cluster = clusterResponse.DBClusters?.[0]
+
+      if (!cluster) {
+        throw new Error(`RDS cluster ${clusterName} not found`)
+      }
+
+      const instanceNames = cluster.DBClusterMembers?.map(member => member.DBInstanceIdentifier ?? '').filter(Boolean) || []
+
+      // 各インスタンスの詳細情報を取得
+      const instances = await Promise.all(
+        instanceNames.map(async (instanceName) => {
+          try {
+            const instanceCommand = new DescribeDBInstancesCommand({
+              DBInstanceIdentifier: instanceName
+            })
+            const instanceResponse = await this.client.send(instanceCommand)
+            const instance = instanceResponse.DBInstances?.[0]
+            
+            return {
+              instanceName,
+              status: instance?.DBInstanceStatus
+            }
+          } catch (error) {
+            console.error(`Failed to get instance ${instanceName} info:`, error)
+            return {
+              instanceName,
+              status: 'unknown'
+            }
+          }
+        })
+      )
+
+      return {
+        clusterStatus: cluster.Status,
+        instances
+      }
     } catch (error) {
       console.error(`Failed to get RDS cluster ${clusterName} info:`, error)
       throw error

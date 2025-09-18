@@ -11,9 +11,15 @@ interface EcsService {
   stopDate: string
 }
 
+interface RdsInstance {
+  instanceName: string
+  status: string
+}
+
 interface RdsCluster {
   clusterName: string
-  status: string
+  clusterStatus: string
+  instances: RdsInstance[]
   startDate: string
   stopDate: string
 }
@@ -240,6 +246,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       </div>
     )
   }
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -395,21 +402,35 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
               <thead>
                 <tr>
                   <th>クラスター名</th>
+                  <th>インスタンス名</th>
                   <th>開始時刻</th>
                   <th>停止時刻</th>
                   <th>状態</th>
                 </tr>
               </thead>
               <tbody>
-                {rdsClusters.map((cluster, index) => {
-                  return (
-                    <tr key={index}>
+                {rdsClusters.flatMap((cluster, index) => {
+                  if (cluster.instances.length === 0) {
+                    return (
+                      <tr key={index}>
+                        <td>{cluster.clusterName}</td>
+                        <td>-</td>
+                        <td>{cluster.startDate || '-'}</td>
+                        <td>{cluster.stopDate || '-'}</td>
+                        <td>{cluster.clusterStatus}</td>
+                      </tr>
+                    )
+                  }
+
+                  return cluster.instances.map((instance, instanceIndex) => (
+                    <tr key={`${index}-${instanceIndex}`}>
                       <td>{cluster.clusterName}</td>
+                      <td>{instance.instanceName}</td>
                       <td>{cluster.startDate || '-'}</td>
                       <td>{cluster.stopDate || '-'}</td>
-                      <td>{cluster.status}</td>
+                      <td>{instance.status}</td>
                     </tr>
-                  )
+                  ))
                 })}
               </tbody>
             </table>

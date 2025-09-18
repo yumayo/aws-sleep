@@ -31,7 +31,7 @@ fastify.register(cors, {
 fastify.register(cookie)
 
 // 認証サービスの初期化
-const userStorage = new UserStorage()
+const userStorage = new UserStorage('./data')
 const sessionManager = new SessionManager()
 const authMiddleware = new AuthMiddleware(sessionManager)
 const authController = new AuthController(userStorage, sessionManager, authMiddleware)
@@ -91,10 +91,11 @@ fastify.get('/rds/status', { preHandler: authMiddleware.authenticate }, async (_
     const config = await configStorage.load()
     const statusList = await Promise.all(
       config.rdsItems.map(async (rds) => {
-        const status = await rdsService.getClusterStatus(rds.clusterName)
+        const clusterInfo = await rdsService.getClusterInfo(rds.clusterName)
         return {
           clusterName: rds.clusterName,
-          status,
+          clusterStatus: clusterInfo.clusterStatus,
+          instances: clusterInfo.instances,
           startDate: rds.startDate,
           stopDate: rds.stopDate
         }
