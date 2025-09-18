@@ -5,14 +5,14 @@ export class ConfigStorage {
   private readonly storage: JsonStorage<Config>
 
   constructor() {
-    this.storage = new JsonStorage<Config>('config.json', './config')
+    this.storage = new JsonStorage<Config>('config.json', './data')
   }
 
   async load(): Promise<Config> {
     const config = await this.storage.load()
     
     if (!config) {
-      throw new Error('Schedule config file not found. Please create config/config.json')
+      throw new Error('Schedule config file not found. Please create data/config.json')
     }
     
     // 設定値の検証

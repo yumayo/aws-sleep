@@ -112,7 +112,7 @@ function getParametersForTemplate(templateFile: string, config: Config): Paramet
 }
 
 function loadConfig(): Config {
-  const configPath = resolve(process.cwd(), 'config/config.json');
+  const configPath = resolve(process.cwd(), 'data/config.json');
   const configContent = readFileSync(configPath, 'utf-8');
   return JSON.parse(configContent) as Config;
 }
