@@ -1,4 +1,4 @@
-import { JsonStorage } from '../../lib/json-storage.js'
+import { JsonStorage } from '@app/lib'
 import { User } from '../../types/auth-types.js'
 import { PasswordHash } from './password-hash.js'
 

@@ -1,4 +1,4 @@
-import { JsonStorage } from '../lib/json-storage'
+import { JsonStorage } from '@app/lib'
 import { Config } from '../types/scheduler-types'
 
 export class ConfigStorage {

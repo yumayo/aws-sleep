@@ -1,5 +1,5 @@
 import { ManualOperationData } from '../types/scheduler-types'
-import { JsonStorage } from '../lib/json-storage'
+import { JsonStorage } from '@app/lib'
 
 export class ManualOperationStorage {
   private readonly storage: JsonStorage<ManualOperationData>

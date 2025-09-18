@@ -8,6 +8,7 @@
     "manage-users": "tsx src/manage-users.ts"
   },
   "dependencies": {
+    "@app/lib": "file:../lib",
     "@aws-sdk/client-cloudformation": "^3.0.0",
     "tsx": "^4.20.5"
   },

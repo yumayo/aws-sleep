@@ -1,5 +1,5 @@
 import { EcsDesiredCountData } from '../../types/scheduler-types'
-import { JsonStorage } from '../../lib/json-storage'
+import { JsonStorage } from '@app/lib'
 
 export class EcsDesiredCountStorage {
   private readonly storage: JsonStorage<EcsDesiredCountData>

@@ -1,5 +1,5 @@
 import { DelayedStopData } from '../types/scheduler-types'
-import { JsonStorage } from '../lib/json-storage'
+import { JsonStorage } from '@app/lib'
 
 export class DelayedStopDataStorage {
   private readonly storage: JsonStorage<DelayedStopData>

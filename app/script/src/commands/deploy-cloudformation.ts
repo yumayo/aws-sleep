@@ -8,16 +8,9 @@ import {
 } from '@aws-sdk/client-cloudformation';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { ConfigStorage } from '../models/config-storage';
+import { Config } from '../types/script-types';
 
-interface Config {
-  vpc: {
-    vpcId: string;
-    subnets: Array<{
-      subnetId: string;
-    }>;
-  };
-  awsRegion: string;
-}
 
 interface DeployOptions {
   stackName: string;
@@ -34,7 +27,8 @@ export async function deployCloudFormation(args: string[]): Promise<void> {
   const templateFile = args[0];
   const stackName = getStackNameFromTemplate(templateFile);
 
-  const config = loadConfig();
+  const configStorage = new ConfigStorage();
+  const config = await configStorage.load();
   
   // テンプレートファイルに応じてパラメータを設定
   const parameters = getParametersForTemplate(templateFile, config);
@@ -111,14 +105,10 @@ function getParametersForTemplate(templateFile: string, config: Config): Paramet
   return [];
 }
 
-function loadConfig(): Config {
-  const configPath = resolve(process.cwd(), 'data/config.json');
-  const configContent = readFileSync(configPath, 'utf-8');
-  return JSON.parse(configContent) as Config;
-}
 
 async function deployCloudFormationStack(options: DeployOptions): Promise<void> {
-  const config = loadConfig();
+  const configStorage = new ConfigStorage();
+  const config = await configStorage.load();
   const client = new CloudFormationClient({
     region: config.awsRegion
   });

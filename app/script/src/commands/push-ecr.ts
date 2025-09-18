@@ -1,17 +1,7 @@
 import { execSync } from 'child_process';
-import { readFile } from 'fs/promises';
-import { resolve } from 'path';
+import { ConfigStorage } from '../models/config-storage';
+import { Config } from '../types/script-types';
 
-interface Config {
-  awsRegion: string;
-  awsAccountId: string;
-}
-
-async function loadConfig(): Promise<Config> {
-  const configPath = resolve(process.cwd(), 'data/config.json');
-  const configContent = await readFile(configPath, 'utf-8');
-  return JSON.parse(configContent) as Config;
-}
 
 
 function executeCommand(command: string, description: string): void {
@@ -24,7 +14,8 @@ function executeCommand(command: string, description: string): void {
 }
 
 export async function pushEcr(): Promise<void> {
-  const config = await loadConfig();
+  const configStorage = new ConfigStorage();
+  const config: Config = await configStorage.load();
   const repositoryName = 'nginx';
   const imageTag = 'latest';
   
