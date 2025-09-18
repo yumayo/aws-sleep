@@ -52,7 +52,8 @@ services:
       context: .
       dockerfile: docker/web/Dockerfile
     volumes:
-      - ./app/web:/app
+      - ./app/web:/workspace/app/web
+      - ./app/lib:/workspace/app/lib
     ports:
       - "5173:5173"
     user: ubuntu
@@ -64,7 +65,8 @@ services:
       context: .
       dockerfile: docker/api/Dockerfile
     volumes:
-      - ./app/api:/app
+      - ./app/api:/workspace/app/api
+      - ./app/lib:/workspace/app/lib
     expose:
       - "5173"
       - "3000"
