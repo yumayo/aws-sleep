@@ -43,10 +43,16 @@ npm run dev manage-users add admin password123
 
 ## 5. 【初回セットアップ】AWSのIAMユーザーの作成とアクセスキーの発行
 
-IAMユーザーの登録が必要です。
+### 5.1. apiコンテナのAWSアクセスキーの設定
+jenkins-iam-role.json が env/api/.env に必要なポリシーです。  
+IAMユーザーを作成して、直接ポリシーをアタッチし、アクセスキーを発行して `env/api/.env` に設定してください。
 
-jenkins-iam-role.json が env/api/.env に必要なポリシーです。
+### 5.2. scriptコンテナのAWSアクセスキーの設定
+
+**テスト用のECSとRDSを作成して確認するためのものですので、実稼働する場合は不要です。**
+
 deploy-cloudformation-iam-role.json が env/script/.env に必要なポリシーです。
+IAMユーザーを作成して、直接ポリシーをアタッチし、アクセスキーを発行して `env/script/.env` に設定してください。
 
 ## 6. 【初回セットアップ】夜間、休日停止する設定を行う
 
