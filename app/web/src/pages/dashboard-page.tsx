@@ -51,6 +51,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
   const [ecsServices, setEcsServices] = useState<EcsService[]>([])
   const [rdsClusters, setRdsClusters] = useState<RdsCluster[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [apiError, setApiError] = useState<string | null>(null)
   const [operationLoading, setOperationLoading] = useState(false)
   const [delayStatus, setDelayStatus] = useState<DelayStatusResponse | null>(null)
   const [showDelayForm, setShowDelayForm] = useState(false)
@@ -71,9 +72,11 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       ])
 
       if (!ecsResponse.ok || !rdsResponse.ok || !delayResponse.ok) {
+        setApiError('APIサーバーエラーが発生しました')
         return
       }
 
+      setApiError(null)
       const ecsData: EcsStatusResponse = await ecsResponse.json()
       const rdsData: RdsStatusResponse = await rdsResponse.json()
       const delayData: DelayStatusResponse = await delayResponse.json()
@@ -175,7 +178,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       })
 
       if (!response.ok) {
-        throw new Error('起動申請に失敗しました。')
+        setApiError('起動申請に失敗しました。')
+        return
       }
 
       setShowDelayForm(false)
@@ -206,7 +210,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       })
 
       if (!response.ok) {
-        throw new Error('マニュアルモード解除に失敗しました')
+        setApiError('マニュアルモード解除に失敗しました。')
+        return
       }
 
       await fetchStatus()
@@ -261,6 +266,22 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
           </button>
         </div>
       </div>
+
+      {apiError && (
+        <div style={{ backgroundColor: '#ffebee', padding: '1rem', marginBottom: '1rem', borderRadius: '4px', border: '1px solid #f44336' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', color: '#d32f2f' }}>API接続エラー</h3>
+          <div style={{ margin: '0 0 0.5rem 0' }}>
+            <strong>エラー内容:</strong>
+            <pre style={{ margin: '0.5rem 0', padding: '0.5rem', backgroundColor: '#f5f5f5', borderRadius: '3px', fontSize: '0.9em', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {apiError}
+            </pre>
+          </div>
+          <p style={{ margin: '0', fontSize: '0.9em', color: '#666' }}>
+            APIサーバーでエラーが発生しています。管理者に連絡してください。
+          </p>
+          <button onClick={fetchStatus} style={{ marginTop: '0.5rem', padding: '0.5rem 1rem' }}>再試行</button>
+        </div>
+      )}
 
       <section>
         <div style={{ backgroundColor: '#ccffff', padding: '10px', margin: '10px 0', border: '1px solid #00cccc' }}>
