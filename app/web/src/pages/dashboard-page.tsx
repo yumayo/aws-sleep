@@ -279,7 +279,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
           <p style={{ margin: '0', fontSize: '0.9em', color: '#666' }}>
             APIサーバーでエラーが発生しています。管理者に連絡してください。
           </p>
-          <button onClick={fetchStatus} style={{ marginTop: '0.5rem', padding: '0.5rem 1rem' }}>再試行</button>
         </div>
       )}
 
