@@ -1,4 +1,8 @@
 
+![alt-text](resources/login-page.png)
+
+![alt-text](resources/dashboard.png)
+
 # 初回セットアップ
 
 ## 1. 【初回セットアップ】scriptコンテナのnpm install
@@ -37,14 +41,27 @@ cd /app/app/script
 npm run dev manage-users add admin password123
 ```
 
+## 5. 【初回セットアップ】AWSのIAMユーザーの作成とアクセスキーの発行
+
+IAMユーザーの登録が必要です。
+
+jenkins-iam-role.json が env/api/.env に必要なポリシーです。
+deploy-cloudformation-iam-role.json が env/script/.env に必要なポリシーです。
+
 # 動作確認
 
-http://localhost:5173 にアクセス
+http://localhost:5173 にアクセス  
 初回セットアップ通りなら、初期パスワード admin と password123 でログインできます。
 
 # **以下はメモ**
 
-# バックエンドサーバーとのテスト通信
+## TODO
+
+- ローカル環境でしか動作しないため、インターネットで操作したい
+    - 管理画面用のECSを作成する
+    - jsonファイルのストレージ管理なので、ECSの再起動でデータが無くなるため、DynamoDBに移動したい
+
+## バックエンドサーバーとのテスト通信
 
 ```sh
 docker compose up -d
@@ -56,7 +73,7 @@ curl http://api:3000/health
 {"status":"ok","timestamp":"2025-08-30T11:22:20.115Z"}
 ```
 
-# バックエンドサーバーのテスト
+## バックエンドサーバーのテスト
 
 ```sh
 docker compose up -d 
