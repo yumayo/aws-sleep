@@ -48,6 +48,41 @@ IAMユーザーの登録が必要です。
 jenkins-iam-role.json が env/api/.env に必要なポリシーです。
 deploy-cloudformation-iam-role.json が env/script/.env に必要なポリシーです。
 
+## 6. 【初回セットアップ】夜間、休日停止する設定を行う
+
+```json
+{
+  "ecsItems": [
+    {
+      "clusterName": "sample-cluster",
+      "serviceName": "sample-service-1",
+      "startDate": "9:00",
+      "stopDate": "21:00"
+    },
+    {
+      "clusterName": "sample-cluster",
+      "serviceName": "sample-service-2",
+      "startDate": "9:00",
+      "stopDate": "21:00"
+    },
+    {
+      "clusterName": "sample-cluster",
+      "serviceName": "sample-service-3",
+      "startDate": "9:00",
+      "stopDate": "21:00"
+    }
+  ],
+  "rdsItems": [
+    {
+      "clusterName": "rds-aurora-sample-auroracluster-zoizerqxon9k",
+      "startDate": "8:40",
+      "stopDate": "21:00"
+    }
+  ],
+  "awsRegion": "ap-northeast-1"
+}
+```
+
 # 動作確認
 
 http://localhost:5173 にアクセス  
