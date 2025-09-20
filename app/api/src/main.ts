@@ -20,6 +20,7 @@ import { Scheduler } from './models/scheduler/scheduler'
 import { EcsScheduleAction } from './models/ecs/ecs-schedule-action'
 import { RdsScheduleAction } from './models/rds/rds-schedule-action'
 import { ScheduleState } from './types/scheduler-types'
+import { calculateScheduleState } from './models/scheduler/schedule-state-calculator'
 
 const fastify = Fastify({
   logger: true
@@ -57,14 +58,20 @@ const ecsDesiredCountStorage = new EcsDesiredCountStorage()
 const ecsService = new EcsService(ecsClient, ecsDesiredCountStorage)
 const rdsService = new RdsService(rdsClient)
 const manualModeStorage = new ManualModeStorage()
-const manualModeController = new ManualModeController(manualModeStorage)
+const manualModeController = new ManualModeController(manualModeStorage, config)
 
 fastify.get('/ecs/status', { preHandler: authMiddleware.authenticate }, async (_request, reply) => {
   try {
     const config = await configStorage.load()
+    const now = new Date()
     const statusList = await Promise.all(
       config.ecsItems.map(async (ecs) => {
         const serviceStatus = await ecsService.getServiceStatus(ecs.clusterName, ecs.serviceName)
+        const schedule = {
+          startDate: ecs.startDate,
+          stopDate: ecs.stopDate
+        }
+        const scheduleState = calculateScheduleState(schedule, now)
         return {
           clusterName: ecs.clusterName,
           serviceName: ecs.serviceName,
@@ -73,7 +80,8 @@ fastify.get('/ecs/status', { preHandler: authMiddleware.authenticate }, async (_
           pendingCount: serviceStatus.pendingCount,
           status: serviceStatus.status,
           startDate: ecs.startDate,
-          stopDate: ecs.stopDate
+          stopDate: ecs.stopDate,
+          scheduleState: scheduleState
         }
       })
     )
@@ -87,15 +95,22 @@ fastify.get('/ecs/status', { preHandler: authMiddleware.authenticate }, async (_
 fastify.get('/rds/status', { preHandler: authMiddleware.authenticate }, async (_request, reply) => {
   try {
     const config = await configStorage.load()
+    const now = new Date()
     const statusList = await Promise.all(
       config.rdsItems.map(async (rds) => {
         const clusterInfo = await rdsService.getClusterInfo(rds.clusterName)
+        const schedule = {
+          startDate: rds.startDate,
+          stopDate: rds.stopDate
+        }
+        const scheduleState = calculateScheduleState(schedule, now)
         return {
           clusterName: rds.clusterName,
           clusterStatus: clusterInfo.clusterStatus,
           instances: clusterInfo.instances,
           startDate: rds.startDate,
-          stopDate: rds.stopDate
+          stopDate: rds.stopDate,
+          scheduleState: scheduleState
         }
       })
     )

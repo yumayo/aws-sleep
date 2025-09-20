@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 
+type ScheduleState = 'active' | 'stop'
+
 interface EcsService {
   clusterName: string
   serviceName: string
@@ -9,6 +11,7 @@ interface EcsService {
   status: string
   startDate: string
   stopDate: string
+  scheduleState: ScheduleState
 }
 
 interface RdsInstance {
@@ -22,6 +25,7 @@ interface RdsCluster {
   instances: RdsInstance[]
   startDate: string
   stopDate: string
+  scheduleState: ScheduleState
 }
 
 interface EcsStatusResponse {
@@ -34,12 +38,13 @@ interface RdsStatusResponse {
   clusters: RdsCluster[]
 }
 
-interface DelayStatusResponse {
+interface ManualModeStatusResponse {
   status: string
   isActive: boolean
   requester?: string
   requestedAt?: string
   scheduledStopAt?: string
+  manualScheduleState?: ScheduleState
 }
 
 interface DashboardPageProps {
@@ -53,9 +58,9 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
   const [error, setError] = useState<string | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
   const [operationLoading, setOperationLoading] = useState(false)
-  const [delayStatus, setDelayStatus] = useState<DelayStatusResponse | null>(null)
-  const [showDelayForm, setShowDelayForm] = useState(false)
-  const [delayFormData, setDelayFormData] = useState({
+  const [manualModeStatus, setManualModeStatus] = useState<ManualModeStatusResponse | null>(null)
+  const [showManualModeForm, setShowManualModeForm] = useState(false)
+  const [manualModeFormData, setManualModeFormData] = useState({
     scheduledDate: '',
     isIndefinite: false
   })
@@ -64,13 +69,13 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     try {
       setError(null)
 
-      const [ecsResponse, rdsResponse, delayResponse] = await Promise.all([
+      const [ecsResponse, rdsResponse, manualModeStatusResponse] = await Promise.all([
         fetch('/api/ecs/status'),
         fetch('/api/rds/status'),
         fetch('/api/manual-mode-status')
       ])
 
-      if (!ecsResponse.ok || !rdsResponse.ok || !delayResponse.ok) {
+      if (!ecsResponse.ok || !rdsResponse.ok || !manualModeStatusResponse.ok) {
         setApiError('APIサーバーエラーが発生しました')
         return
       }
@@ -78,17 +83,17 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       setApiError(null)
       const ecsData: EcsStatusResponse = await ecsResponse.json()
       const rdsData: RdsStatusResponse = await rdsResponse.json()
-      const delayData: DelayStatusResponse = await delayResponse.json()
+      const manualModeStatus: ManualModeStatusResponse = await manualModeStatusResponse.json()
 
       setEcsServices(ecsData.services)
       setRdsClusters(rdsData.clusters)
-      setDelayStatus(delayData)
+      setManualModeStatus(manualModeStatus)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     }
   }
 
-  const setupStartRequestForm = () => {
+  const setupManualModeStartForm = () => {
     const now = new Date()
     const defaultTime = new Date(now.getTime() + 60 * 60 * 1000)
 
@@ -99,17 +104,17 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     const minutes = String(defaultTime.getMinutes()).padStart(2, '0')
     const defaultTimeString = `${year}-${month}-${day}T${hours}:${minutes}`
 
-    setDelayFormData({
+    setManualModeFormData({
       scheduledDate: defaultTimeString,
       isIndefinite: false
     })
-    setShowDelayForm(true)
+    setShowManualModeForm(true)
   }
 
-  const submitStartRequest = async (e: React.FormEvent) => {
+  const submitManualModeStartRequest = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!delayFormData.isIndefinite && !delayFormData.scheduledDate) {
+    if (!manualModeFormData.isIndefinite && !manualModeFormData.scheduledDate) {
       alert('サーバーの停止日時を入力してください')
       return
     }
@@ -117,15 +122,15 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     const now = new Date()
     let scheduledDate: Date | null = null
 
-    if (!delayFormData.isIndefinite) {
-      scheduledDate = new Date(delayFormData.scheduledDate)
+    if (!manualModeFormData.isIndefinite) {
+      scheduledDate = new Date(manualModeFormData.scheduledDate)
       if (isNaN(scheduledDate.getTime()) || scheduledDate <= now) {
         alert('有効な未来の日時を入力してください')
         return
       }
     }
 
-    const confirmMessage = delayFormData.isIndefinite
+    const confirmMessage = manualModeFormData.isIndefinite
       ? `無期限起動申請を行いますか？\n起動申請を行うとサーバーが起動され、手動で解除するまで起動状態を維持します。`
       : `${scheduledDate!.toLocaleString('ja-JP')} まで起動申請を行いますか？\n起動申請を行うとサーバーが起動され、指定した時刻まで起動状態を維持します。`
     if (!confirm(confirmMessage)) {
@@ -152,7 +157,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
         return
       }
 
-      setShowDelayForm(false)
+      setShowManualModeForm(false)
       await fetchStatus()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
@@ -161,7 +166,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     }
   }
 
-  const submitStopRequest = async () => {
+  const submitManualModeStopRequest = async () => {
     if (!confirm('全サーバーを停止してマニュアルモードに変更しますか？\n停止申請を行うとサーバーが停止され、手動で解除するまで停止状態を維持します。')) {
       return
     }
@@ -193,9 +198,9 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     }
   }
 
-  const setupCancelManualModeForm = () => {
-    setShowDelayForm(false)
-    setDelayFormData({ scheduledDate: '', isIndefinite: false })
+  const cancelManualModeForm = () => {
+    setShowManualModeForm(false)
+    setManualModeFormData({ scheduledDate: '', isIndefinite: false })
   }
 
   const cancelManualMode = async () => {
@@ -224,8 +229,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     }
   }
 
-  const handleDelayFormDataChange = (field: keyof typeof delayFormData, value: string | boolean) => {
-    setDelayFormData(prev => ({ ...prev, [field]: value }))
+  const handleManualModeFormDataChange = (field: keyof typeof manualModeFormData, value: string | boolean) => {
+    setManualModeFormData(prev => ({ ...prev, [field]: value }))
   }
 
   useEffect(() => {
@@ -300,29 +305,30 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
             マニュアルモード中はサーバーの自動起動と自動停止を行わなくなります。<br />
             早朝の勤務や残業、休日に出勤された場合に使用することを想定しています。<br />
           </p>
-          <strong>{delayStatus?.isActive ? '現在はマニュアルモード中です。' : '現在はマニュアルモードではありません。'}</strong>
-          <p>マニュアルモードモード申請者: {delayStatus?.requester || '-'}</p>
-          <p>マニュアルモードモード申請日時: {delayStatus?.requestedAt ? new Date(delayStatus.requestedAt).toLocaleString('ja-JP') : '-'}</p>
-          <p>マニュアルモードモード解除予定日時: {delayStatus?.scheduledStopAt ? new Date(delayStatus.scheduledStopAt).toLocaleString('ja-JP') : '-'}</p>
+          <strong>{manualModeStatus?.isActive ? '現在はマニュアルモード中です。' : '現在はマニュアルモードではありません。'}</strong>
+          <p>マニュアルモード設定状態: <strong>{manualModeStatus?.manualScheduleState || '-'}</strong></p>
+          <p>マニュアルモードモード申請者: {manualModeStatus?.requester || '-'}</p>
+          <p>マニュアルモードモード申請日時: {manualModeStatus?.requestedAt ? new Date(manualModeStatus.requestedAt).toLocaleString('ja-JP') : '-'}</p>
+          <p>マニュアルモードモード解除予定日時: {manualModeStatus?.scheduledStopAt ? new Date(manualModeStatus.scheduledStopAt).toLocaleString('ja-JP') : '-'}</p>
           <div>
-            <button onClick={setupStartRequestForm} disabled={operationLoading || showDelayForm}>
+            <button onClick={setupManualModeStartForm} disabled={operationLoading || showManualModeForm}>
               サーバーを起動する
             </button>
           </div>
-          {showDelayForm && (
+          {showManualModeForm && (
             <div style={{ backgroundColor: '#f0f8ff', padding: '15px', margin: '10px 0', border: '2px solid #4169e1', borderRadius: '5px' }}>
               <h3>起動申請</h3>
-              <form onSubmit={submitStartRequest}>
+              <form onSubmit={submitManualModeStartRequest}>
                 <div style={{ marginBottom: '15px' }}>
                   <label>
                     停止日時:
                     <input
                       type="datetime-local"
-                      value={delayFormData.scheduledDate}
-                      onChange={(e) => handleDelayFormDataChange('scheduledDate', e.target.value)}
+                      value={manualModeFormData.scheduledDate}
+                      onChange={(e) => handleManualModeFormDataChange('scheduledDate', e.target.value)}
                       style={{ marginLeft: '10px', padding: '5px' }}
-                      disabled={operationLoading || delayFormData.isIndefinite}
-                      required={!delayFormData.isIndefinite}
+                      disabled={operationLoading || manualModeFormData.isIndefinite}
+                      required={!manualModeFormData.isIndefinite}
                     />
                   </label>
                 </div>
@@ -330,8 +336,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                   <label>
                     <input
                       type="checkbox"
-                      checked={delayFormData.isIndefinite}
-                      onChange={(e) => handleDelayFormDataChange('isIndefinite', e.target.checked)}
+                      checked={manualModeFormData.isIndefinite}
+                      onChange={(e) => handleManualModeFormDataChange('isIndefinite', e.target.checked)}
                       disabled={operationLoading}
                     />
                     停止しない（手動解除まで起動状態を維持）
@@ -341,7 +347,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                   <button type="submit" disabled={operationLoading} style={{ marginRight: '10px' }}>
                     申請する
                   </button>
-                  <button type="button" onClick={setupCancelManualModeForm} disabled={operationLoading}>
+                  <button type="button" onClick={cancelManualModeForm} disabled={operationLoading}>
                     キャンセル
                   </button>
                 </div>
@@ -349,12 +355,12 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
             </div>
           )}
           <div>
-            <button onClick={submitStopRequest} disabled={operationLoading}>
+            <button onClick={submitManualModeStopRequest} disabled={operationLoading}>
               サーバーを停止する
             </button>
           </div>
           <div>
-            <button onClick={cancelManualMode} disabled={operationLoading || !delayStatus?.isActive}>
+            <button onClick={cancelManualMode} disabled={operationLoading || !manualModeStatus?.isActive}>
               マニュアルモードを解除する
             </button>
           </div>
@@ -378,6 +384,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                   <th>開始時刻</th>
                   <th>停止時刻</th>
                   <th>状態</th>
+                  <th>スケジュール状態</th>
                 </tr>
               </thead>
               <tbody>
@@ -392,6 +399,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                       <td>{service.startDate || '-'}</td>
                       <td>{service.stopDate || '-'}</td>
                       <td>{service.status}</td>
+                      <td><strong>{service.scheduleState}</strong></td>
                     </tr>
                   )
                 })}
@@ -415,6 +423,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                   <th>開始時刻</th>
                   <th>停止時刻</th>
                   <th>状態</th>
+                  <th>スケジュール状態</th>
                 </tr>
               </thead>
               <tbody>
@@ -427,6 +436,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                         <td>{cluster.startDate || '-'}</td>
                         <td>{cluster.stopDate || '-'}</td>
                         <td>{cluster.clusterStatus}</td>
+                        <td><strong>{cluster.scheduleState}</strong></td>
                       </tr>
                     )
                   }
@@ -438,6 +448,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                       <td>{cluster.startDate || '-'}</td>
                       <td>{cluster.stopDate || '-'}</td>
                       <td>{instance.status}</td>
+                      <td><strong>{cluster.scheduleState}</strong></td>
                     </tr>
                   ))
                 })}

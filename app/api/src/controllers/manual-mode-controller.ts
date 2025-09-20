@@ -1,11 +1,14 @@
-import { ManualModeData, ScheduleState } from '../types/scheduler-types'
+import { ManualModeData, ScheduleState, Config } from '../types/scheduler-types'
 import { ManualModeStorage } from '../models/manual-mode/manual-mode-storage'
+import { calculateScheduleState } from '../models/scheduler/schedule-state-calculator'
 
 export class ManualModeController {
   private readonly manualModeStorage: ManualModeStorage
+  private readonly config: Config
 
-  constructor(manualModeStorage: ManualModeStorage) {
+  constructor(manualModeStorage: ManualModeStorage, config: Config) {
     this.manualModeStorage = manualModeStorage
+    this.config = config
   }
 
   async startManualMode(requester: string, scheduledTime: Date | undefined, scheduleState: ScheduleState): Promise<{
@@ -95,19 +98,23 @@ export class ManualModeController {
     isActive: boolean,
     requestedAt?: Date,
     scheduledStopAt?: Date,
-    requester?: string
+    requester?: string,
+    manualScheduleState?: ScheduleState
   }> {
     const operationData = await this.manualModeStorage.load()
 
     if (!operationData) {
-      return { isActive: false }
+      return {
+        isActive: false
+      }
     }
 
     return {
       isActive: true,
       requestedAt: operationData.requestTime,
       scheduledStopAt: operationData.scheduledTime,
-      requester: operationData.requester
+      requester: operationData.requester,
+      manualScheduleState: operationData.scheduleState
     }
   }
 
