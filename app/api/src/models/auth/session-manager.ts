@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto'
+import { FastifyReply } from 'fastify'
 import { Session, AuthUser } from '../../types/auth-types'
 import { SessionDataStorage } from './session-data-storage'
 
@@ -26,7 +27,7 @@ export class SessionManager {
     return sessionId
   }
 
-  async validate(sessionId: string): Promise<AuthUser | null> {
+  async update(sessionId: string, reply?: FastifyReply): Promise<AuthUser | null> {
     const session = await this.sessionDataStorage.get(sessionId)
     if (!session) {
       return null
@@ -45,6 +46,18 @@ export class SessionManager {
     const updatedSession = { ...session, expiresAt: newExpiresAt.toISOString() }
     await this.sessionDataStorage.save(sessionId, updatedSession)
 
+    // Cookieのライフタイムも更新
+    if (reply) {
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' as const : 'lax' as const,
+        maxAge: 30 * 60, // 30分
+        path: '/'
+      }
+      reply.setCookie('sessionId', sessionId, cookieOptions)
+    }
+
     return { username: session.username }
   }
 
@@ -52,7 +65,7 @@ export class SessionManager {
     await this.sessionDataStorage.delete(sessionId)
   }
 
-  async update(): Promise<void> {
+  async clean(): Promise<void> {
     const sessions = await this.sessionDataStorage.getAllSessions()
     const now = new Date()
     const expiredSessionIds: string[] = []

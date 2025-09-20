@@ -35,7 +35,7 @@ export class AuthMiddleware {
       return reply.send({ error: '認証が必要です' })
     }
 
-    const user = await this.sessionManager.validate(sessionId)
+    const user = await this.sessionManager.update(sessionId, reply)
     console.log('セッション検証結果:', {
       sessionId: sessionId.substring(0, 8) + '...',
       user: user ? { username: user.username } : null

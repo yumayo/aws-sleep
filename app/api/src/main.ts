@@ -180,7 +180,7 @@ try {
   console.log('ECS and RDS scheduler initialized successfully')
 
   // 期限切れセッションの定期クリーンアップ
-  setInterval(async () => { await sessionManager.update() }, 5 * 60 * 1000) // 5分毎
+  setInterval(async () => { await sessionManager.clean() }, 5 * 60 * 1000) // 5分毎
 
   await fastify.listen({ port: 3000, host: '0.0.0.0' })
   console.log('Server listening on port 3000')
