@@ -1,20 +1,16 @@
 import { randomUUID } from 'crypto'
-import { Session, AuthUser } from '../../types/auth-types.js'
-import { JsonStorage } from '@app/lib'
-
-interface SessionData {
-  sessions: Record<string, Session>
-}
+import { Session, AuthUser } from '../../types/auth-types'
+import { SessionDataStorage } from './session-data-storage'
 
 export class SessionManager {
-  private readonly storage: JsonStorage<SessionData>
+  private readonly sessionDataStorage: SessionDataStorage
   private readonly SESSION_DURATION_MS = 30 * 60 * 1000 // 30分
 
-  constructor() {
-    this.storage = new JsonStorage<SessionData>('sessions.json')
+  constructor(sessionDataStorage: SessionDataStorage) {
+    this.sessionDataStorage = sessionDataStorage
   }
 
-  async createSession(username: string): Promise<string> {
+  async create(username: string): Promise<string> {
     const sessionId = randomUUID()
     const now = new Date()
     const expiresAt = new Date(now.getTime() + this.SESSION_DURATION_MS)
@@ -26,15 +22,12 @@ export class SessionManager {
       expiresAt: expiresAt.toISOString()
     }
 
-    const data = await this.loadSessions()
-    data.sessions[sessionId] = session
-    await this.storage.save(data)
+    await this.sessionDataStorage.save(sessionId, session)
     return sessionId
   }
 
-  async validateSession(sessionId: string): Promise<AuthUser | null> {
-    const data = await this.loadSessions()
-    const session = data.sessions[sessionId]
+  async validate(sessionId: string): Promise<AuthUser | null> {
+    const session = await this.sessionDataStorage.get(sessionId)
     if (!session) {
       return null
     }
@@ -43,45 +36,36 @@ export class SessionManager {
     const expiresAt = new Date(session.expiresAt)
 
     if (now > expiresAt) {
-      delete data.sessions[sessionId]
-      await this.storage.save(data)
+      await this.sessionDataStorage.delete(sessionId)
       return null
     }
 
     // セッション延長
     const newExpiresAt = new Date(now.getTime() + this.SESSION_DURATION_MS)
-    session.expiresAt = newExpiresAt.toISOString()
-    await this.storage.save(data)
+    const updatedSession = { ...session, expiresAt: newExpiresAt.toISOString() }
+    await this.sessionDataStorage.save(sessionId, updatedSession)
 
     return { username: session.username }
   }
 
-  async destroySession(sessionId: string): Promise<void> {
-    const data = await this.loadSessions()
-    delete data.sessions[sessionId]
-    await this.storage.save(data)
+  async destroy(sessionId: string): Promise<void> {
+    await this.sessionDataStorage.delete(sessionId)
   }
 
-  async cleanupExpiredSessions(): Promise<void> {
-    const data = await this.loadSessions()
+  async cleanupExpired(): Promise<void> {
+    const sessions = await this.sessionDataStorage.getAllSessions()
     const now = new Date()
-    let hasChanges = false
+    const expiredSessionIds: string[] = []
 
-    for (const [sessionId, session] of Object.entries(data.sessions)) {
+    for (const [sessionId, session] of Object.entries(sessions)) {
       const expiresAt = new Date(session.expiresAt)
       if (now > expiresAt) {
-        delete data.sessions[sessionId]
-        hasChanges = true
+        expiredSessionIds.push(sessionId)
       }
     }
 
-    if (hasChanges) {
-      await this.storage.save(data)
+    if (expiredSessionIds.length > 0) {
+      await this.sessionDataStorage.delete(expiredSessionIds)
     }
-  }
-
-  private async loadSessions(): Promise<SessionData> {
-    const data = await this.storage.load()
-    return data || { sessions: {} }
   }
 }

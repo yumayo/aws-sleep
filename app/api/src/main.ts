@@ -11,6 +11,7 @@ import { ManualModeStorage } from './models/manual-mode/manual-mode-storage'
 import { ConfigStorage } from './models/config/config-storage'
 import { UserStorage } from './models/auth/user-storage'
 import { SessionManager } from './models/auth/session-manager'
+import { SessionDataStorage } from './models/auth/session-data-storage'
 import { AuthMiddleware } from './middleware/auth-middleware'
 import { EcsService } from './models/ecs/ecs-service'
 import { EcsDesiredCountStorage } from './models/ecs/ecs-desired-count-storage'
@@ -32,13 +33,14 @@ fastify.register(cookie)
 
 // 認証サービスの初期化
 const userStorage = new UserStorage('./data')
-const sessionManager = new SessionManager()
+const sessionDataStorage = new SessionDataStorage()
+const sessionManager = new SessionManager(sessionDataStorage)
 const authMiddleware = new AuthMiddleware(sessionManager)
 const authController = new AuthController(userStorage, sessionManager, authMiddleware)
 
 // 期限切れセッションの定期クリーンアップ
 setInterval(() => {
-  sessionManager.cleanupExpiredSessions()
+  sessionManager.cleanupExpired()
 }, 5 * 60 * 1000) // 5分毎
 
 // パブリックエンドポイント

@@ -34,7 +34,7 @@ export class AuthController {
       }
 
       console.log('セッション作成開始:', { username })
-      const sessionId = await this.sessionManager.createSession(username)
+      const sessionId = await this.sessionManager.create(username)
       console.log('セッション作成完了:', { username, sessionId: sessionId.substring(0, 8) + '...' })
 
       const cookieOptions = {
@@ -70,7 +70,7 @@ export class AuthController {
     try {
       const sessionId = request.cookies.sessionId
       if (sessionId) {
-        await this.sessionManager.destroySession(sessionId)
+        await this.sessionManager.destroy(sessionId)
       }
 
       reply.clearCookie('sessionId')
