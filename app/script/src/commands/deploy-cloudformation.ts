@@ -8,8 +8,8 @@ import {
 } from '@aws-sdk/client-cloudformation';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { ConfigStorage } from '../models/config-storage';
-import { Config } from '../types/script-types';
+import { AwsConfigStorage } from '../models/aws-config-storage';
+import { AwsConfig } from '../types/script-types';
 
 
 interface DeployOptions {
@@ -27,11 +27,11 @@ export async function deployCloudFormation(args: string[]): Promise<void> {
   const templateFile = args[0];
   const stackName = getStackNameFromTemplate(templateFile);
 
-  const configStorage = new ConfigStorage();
-  const config = await configStorage.load();
+  const awsConfigStorage = new AwsConfigStorage();
+  const awsConfig = await awsConfigStorage.load();
   
   // テンプレートファイルに応じてパラメータを設定
-  const parameters = getParametersForTemplate(templateFile, config);
+  const parameters = getParametersForTemplate(templateFile, awsConfig);
 
   try {
     await deployCloudFormationStack({
@@ -51,7 +51,7 @@ function getStackNameFromTemplate(templateFile: string): string {
   return fileName.replace(/\.ya?ml$/, '');
 }
 
-function getParametersForTemplate(templateFile: string, config: Config): Parameter[] {
+function getParametersForTemplate(templateFile: string, awsConig: AwsConfig): Parameter[] {
   const fileName = templateFile.split('/').pop() || '';
   
   // ecs-sample.ymlはVPCパラメータが必要
@@ -59,22 +59,22 @@ function getParametersForTemplate(templateFile: string, config: Config): Paramet
     return [
       {
         ParameterKey: 'VpcId',
-        ParameterValue: config.vpc.vpcId
+        ParameterValue: awsConig.vpc.vpcId
       },
       {
         ParameterKey: 'SubnetIds',
-        ParameterValue: config.vpc.subnets.map(subnet => subnet.subnetId).join(',')
+        ParameterValue: awsConig.vpc.subnets.map(subnet => subnet.subnetId).join(',')
       }
     ];
   } else if (fileName == 'vpc-endpoints.yml') {
     return [
       {
         ParameterKey: 'VpcId',
-        ParameterValue: config.vpc.vpcId
+        ParameterValue: awsConig.vpc.vpcId
       },
       {
         ParameterKey: 'SubnetIds',
-        ParameterValue: config.vpc.subnets.map(subnet => subnet.subnetId).join(',')
+        ParameterValue: awsConig.vpc.subnets.map(subnet => subnet.subnetId).join(',')
       }
     ];
   } else if (fileName === 'rds-aurora-sample.yml') {
@@ -84,11 +84,11 @@ function getParametersForTemplate(templateFile: string, config: Config): Paramet
     return [
       {
         ParameterKey: 'VpcId',
-        ParameterValue: config.vpc.vpcId
+        ParameterValue: awsConig.vpc.vpcId
       },
       {
         ParameterKey: 'SubnetIds',
-        ParameterValue: config.vpc.subnets.map(subnet => subnet.subnetId).join(',')
+        ParameterValue: awsConig.vpc.subnets.map(subnet => subnet.subnetId).join(',')
       },
       {
         ParameterKey: 'MasterPassword',
@@ -107,7 +107,7 @@ function getParametersForTemplate(templateFile: string, config: Config): Paramet
 
 
 async function deployCloudFormationStack(options: DeployOptions): Promise<void> {
-  const configStorage = new ConfigStorage();
+  const configStorage = new AwsConfigStorage();
   const config = await configStorage.load();
   const client = new CloudFormationClient({
     region: config.awsRegion

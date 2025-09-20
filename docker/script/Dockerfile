@@ -53,6 +53,10 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 COPY ./docker/script/install-docker.sh /tmp/install-docker.sh
 RUN bash /tmp/install-docker.sh
 
+# cliスクリプトをコピーして実行可能にする
+COPY ./docker/script/cli /usr/local/bin/cli
+RUN chmod +x /usr/local/bin/cli
+
 USER ubuntu
 
 WORKDIR /workspace

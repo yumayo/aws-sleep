@@ -4,8 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite build && node dist/main.js",
-    "manage-users": "tsx src/manage-users.ts"
+    "dev": "vite build --logLevel silent && node dist/main.js"
   },
   "dependencies": {
     "@app/lib": "file:../lib",

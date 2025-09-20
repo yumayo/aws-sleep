@@ -9,49 +9,41 @@
 
 ```sh
 docker compose up -d
-docker compose exec script bash
-cd /app/app/script
-npm install
+```
+
+```sh
+docker compose exec script bash -c 'cd /app/app/script && npm install'
 ```
 
 ## 2. 【初回セットアップ】apiコンテナのnpm install
 
 ```sh
-docker compose up -d
-docker compose exec script bash
-cd /app/app/api
-npm install
+docker compose exec script bash -c 'cd /app/app/api && npm install'
 ```
 
 ## 3. 【初回セットアップ】webコンテナのnpm install
 
 ```sh
-docker compose up -d
-docker compose exec script bash
-cd /app/app/web
-npm install
+docker compose exec script bash -c 'cd /app/app/web && npm install'
 ```
 
 ## 4. 【初回セットアップ】管理者ユーザーを作成
 
 ```sh
-docker compose up -d
-docker compose exec script bash
-cd /app/app/script
-npm run dev manage-users add admin password123
+docker compose exec script cli manage-users add admin password123
 ```
 
 ## 5. 【初回セットアップ】AWSのIAMユーザーの作成とアクセスキーの発行
 
-### 5.1. apiコンテナのAWSアクセスキーの設定
-jenkins-iam-role.json が env/api/.env に必要なポリシーです。  
+### 5.1. 【初回セットアップ】apiコンテナのAWSアクセスキーの設定
+api-container-iam-policy.json が env/api/.env に必要なポリシーです。  
 IAMユーザーを作成して、直接ポリシーをアタッチし、アクセスキーを発行して `env/api/.env` に設定してください。
 
-### 5.2. scriptコンテナのAWSアクセスキーの設定
+### 5.2. 【初回セットアップ】【オプション】scriptコンテナのAWSアクセスキーの設定
 
 **テスト用のECSとRDSを作成して確認するためのものですので、実稼働する場合は不要です。**
 
-deploy-cloudformation-iam-role.json が env/script/.env に必要なポリシーです。
+script-container-iam-policy.json が env/script/.env に必要なポリシーです。
 IAMユーザーを作成して、直接ポリシーをアタッチし、アクセスキーを発行して `env/script/.env` に設定してください。
 
 ## 6. 【初回セットアップ】夜間、休日停止する設定を行う
@@ -91,6 +83,33 @@ IAMユーザーを作成して、直接ポリシーをアタッチし、アク�
 }
 ```
 
+## 7. 【初回セットアップ】【オプション】AWS環境がない場合にテスト用の環境を整えるための設定
+
+**テスト用のECSとRDSを作成して確認するためのものですので、実稼働する場合は不要です。**
+
+下記のような設定をしたjsonファイルを app/api/data/aws-config.json に置く。
+
+```json
+{
+  "vpc": {
+    "vpcId": "vpc-68c2fc51b7c4d6544",
+    "subnets": [
+      {
+        "subnetId": "subnet-795543aebce143aa7"
+      },
+      {
+        "subnetId": "subnet-26e2366fd33b96550"
+      },
+      {
+        "subnetId": "subnet-270ff4a7887085856"
+      }
+    ]
+  },
+  "awsRegion": "ap-northeast-1",
+  "awsAccountId": "123456789012"
+}
+```
+
 # 動作確認
 
 http://localhost:5173 にアクセス  
@@ -104,50 +123,38 @@ http://localhost:5173 にアクセス
     - 管理画面用のECSを作成する
     - jsonファイルのストレージ管理なので、ECSの再起動でデータが無くなるため、DynamoDBに移動したい
 
-## バックエンドサーバーとのテスト通信
+## apiサーバーとのテスト通信
 
 ```sh
-docker compose up -d
-docker compose exec script bash
-curl http://api:3000/health
+docker compose exec script bash -c 'curl http://api:3000/health && echo ""'
 ```
 
 ```
 {"status":"ok","timestamp":"2025-08-30T11:22:20.115Z"}
 ```
 
-## バックエンドサーバーのテスト
+## apiサーバーのテスト
 
 ```sh
-docker compose up -d 
-docker compose exec script bash
-cd app/api
-npm test
+docker compose exec script bash -c 'cd app/api && npm test'
 ```
 
 ## RDSのパスワード生成コマンド
 
 ```sh
-docker compose up -d 
-docker compose exec script bash
-cd app/script
-npm run dev generate-rds-password
-cp 
+docker compose exec script cli generate-rds-password
 ```
 
 ## CloudFormation デプロイ
 
+### 基本的な使用方法
+
 ```bash
-docker compose up -d 
-docker compose exec script bash
-cd app/script
+docker compose exec script cli deploy-cloudformation ../infra/ecs-sample.yml
+```
 
-# 基本的な使用方法
-npm run dev deploy-cloudformation ../infra/ecs-sample.yml
+### スタック名を指定
 
-# スタック名を指定
-npm run dev deploy-cloudformation ../infra/ecs-sample.yml ecs-sample
-
-# VPCとサブネットを指定
-npm run dev deploy-cloudformation ../infra/ecs-sample.yml ecs-sample vpc-0123456789abcdef0 subnet-1 public-subnet-2 public-subnet-3
+```bash
+docker compose exec script cli deploy-cloudformation ../infra/ecs-sample.yml ecs-sample
 ```

@@ -35,7 +35,7 @@ export function generateRdsPassword(): string {
   return password.split('').sort(() => Math.random() - 0.5).join('');
 }
 
-export async function generateRdsPasswordCommand(): Promise<void> {
+export async function generateRdsPasswordCommand(args: string[]): Promise<void> {
   const password = generateRdsPassword();
 
   console.log('Generated RDS password:');

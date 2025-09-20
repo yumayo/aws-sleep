@@ -1,18 +1,18 @@
 import { JsonStorage } from '@app/lib'
-import { Config } from '../types/script-types'
+import { AwsConfig } from '../types/script-types'
 
-export class ConfigStorage {
-  private readonly storage: JsonStorage<Config>
+export class AwsConfigStorage {
+  private readonly storage: JsonStorage<AwsConfig>
 
   constructor() {
-    this.storage = new JsonStorage<Config>('config.json', './data')
+    this.storage = new JsonStorage<AwsConfig>('aws-config.json', '../api/data')
   }
 
-  async load(): Promise<Config> {
+  async load(): Promise<AwsConfig> {
     const config = await this.storage.load()
     
     if (!config) {
-      throw new Error('Script config file not found. Please create data/config.json')
+      throw new Error('Script config file not found. Please create ../api/data/aws-config.json')
     }
     
     // 設定値の検証
@@ -41,7 +41,7 @@ export class ConfigStorage {
     return config
   }
 
-  async save(config: Config): Promise<void> {
+  async save(config: AwsConfig): Promise<void> {
     await this.storage.save(config)
   }
 

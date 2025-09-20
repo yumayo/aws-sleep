@@ -1,4 +1,4 @@
-export interface Config {
+export interface AwsConfig {
   vpc: {
     vpcId: string;
     subnets: Array<{
