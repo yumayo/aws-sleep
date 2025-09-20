@@ -1,12 +1,11 @@
 import { ScheduleAction } from '../types/scheduler-types'
-import { ScheduleStateCalculator } from './schedule-state-calculator'
+import { calculateScheduleState } from './schedule-state-calculator'
 import { ManualOperationStorage } from './manual-operation-storage'
 
 export class Scheduler {
   private readonly scheduleActions: ScheduleAction[]
   private readonly manualOperationStorage: ManualOperationStorage
   private intervalId: NodeJS.Timeout | null = null
-  private lastExecutionTime: Date | null = null
 
   constructor(scheduleActions: ScheduleAction[], manualOperationStorage: ManualOperationStorage) {
     this.scheduleActions = scheduleActions
@@ -16,24 +15,14 @@ export class Scheduler {
   async startScheduler(): Promise<void> {
     console.log('Starting internal scheduler (1-minute intervals)...')
 
-    // 初回実行時刻を記録
-    this.lastExecutionTime = new Date()
-
     // 1分ごとにupdateを実行
     this.intervalId = setInterval(async () => {
-
       const now = new Date()
-
       try {
-        const startTime = this.lastExecutionTime!
-        
         // 前回実行時刻から現在時刻までの範囲で実行
-        await this.update(startTime, now)
+        await this.update(now)
       } catch (error) {
         console.error('Scheduler interval error:', error)
-      } finally {
-        // 実行完了時刻を更新
-        this.lastExecutionTime = now
       }
     }, 60000) // 60秒 = 1分
 
@@ -44,22 +33,34 @@ export class Scheduler {
     if (this.intervalId) {
       clearInterval(this.intervalId)
       this.intervalId = null
-      this.lastExecutionTime = null
       console.log('Internal scheduler stopped')
     }
   }
 
-  async update(startTime: Date, endTime: Date): Promise<void> {
-    console.log('Calculating schedule actions...')
-    console.log(`Time range: ${startTime.toISOString()} - ${endTime.toISOString()}`)
+  async update(now: Date): Promise<void> {
+    const manualOperation = await this.manualOperationStorage.load()
+    if (manualOperation) {
+      await this.updateManualMode(now)
+    } else {
+      await this.updateAutoMode(now)
+    }
+  }
 
-    // 期限切れの遅延停止をチェックしてクリア
-    await this.manualOperationStorage.checkAndClearExpiredDelayedStop()
+  async updateManualMode(now: Date): Promise<void> {
+    const manualOperation = await this.manualOperationStorage.load()
+    if (manualOperation === null) {
+      return
+    }
 
-    // マニュアルモードチェック
-    const isManualModeActive = await this.manualOperationStorage.isManualModeActive()
-    if (isManualModeActive) {
-      const manualOperation = await this.manualOperationStorage.load()
+    if (!manualOperation.scheduledTime) {
+      return
+    }
+
+    if (now >= manualOperation.scheduledTime) {
+      await this.manualOperationStorage.clear()
+      console.log('Delayed stop operation expired and cleared')
+
+    } else {
       const requestedAt = manualOperation?.requestTime ? new Date(manualOperation.requestTime).toLocaleString('ja-JP') : 'unknown'
       const scheduledStopAt = manualOperation?.scheduledTime ? new Date(manualOperation.scheduledTime).toLocaleString('ja-JP') : 'not scheduled'
       const operationMode = manualOperation?.operationMode || 'unknown'
@@ -74,15 +75,14 @@ export class Scheduler {
           await scheduleAction.invoke('stop')
         }
       }
-      return
     }
+  }
 
+  async updateAutoMode(now: Date): Promise<void> {
     for (const scheduleAction of this.scheduleActions) {
       const schedule = scheduleAction.getSchedule()
-      const states = await ScheduleStateCalculator.calculateScheduleState(schedule, startTime, endTime)
-      for (const state of states) {
-        await scheduleAction.invoke(state)
-      }
+      const state = calculateScheduleState(schedule, now)
+      await scheduleAction.invoke(state)
     }
   }
 }

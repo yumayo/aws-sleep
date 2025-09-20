@@ -31,27 +31,4 @@ export class ManualOperationStorage {
   async exists(): Promise<boolean> {
     return this.storage.exists()
   }
-
-  // マニュアルモードが有効かどうかを判定
-  async isManualModeActive(): Promise<boolean> {
-    const data = await this.load()
-    return data !== null
-  }
-
-  // 遅延停止の場合、スケジュール時刻が過ぎたら自動クリア
-  async checkAndClearExpiredDelayedStop(): Promise<boolean> {
-    const data = await this.load()
-    if (!data || !data.scheduledTime) {
-      return false
-    }
-
-    const now = new Date()
-    if (now >= data.scheduledTime) {
-      await this.clear()
-      console.log('Delayed stop operation expired and cleared')
-      return true
-    }
-
-    return false
-  }
 }
