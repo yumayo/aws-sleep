@@ -1,22 +1,22 @@
-import { ManualOperationData } from '../types/scheduler-types'
-import { ManualOperationStorage } from '../models/storage/manual-operation-storage'
+import { ManualModeData } from '../types/scheduler-types'
+import { ManualModeStorage } from '../models/storage/manual-mode-storage'
 import { ConfigStorage } from '../models/storage/config-storage'
 import { EcsService } from '../models/ecs/ecs-service'
 import { RdsService } from '../models/rds/rds-service'
 
-export class ManualOperationController {
-  private readonly manualOperationStorage: ManualOperationStorage
+export class ManualModeController {
+  private readonly manualModeStorage: ManualModeStorage
   private readonly configStorage: ConfigStorage
   private readonly ecsService: EcsService
   private readonly rdsService: RdsService
 
   constructor(
-    manualOperationStorage: ManualOperationStorage, 
+    manualModeStorage: ManualModeStorage,
     configStorage: ConfigStorage,
     ecsService: EcsService,
     rdsService: RdsService
   ) {
-    this.manualOperationStorage = manualOperationStorage
+    this.manualModeStorage = manualModeStorage
     this.configStorage = configStorage
     this.ecsService = ecsService
     this.rdsService = rdsService
@@ -54,30 +54,30 @@ export class ManualOperationController {
   async requestManualStart(requester?: string): Promise<{
     success: boolean,
     message: string,
-    operationData?: ManualOperationData | null,
-    previousOperation?: ManualOperationData | null
+    operationData?: ManualModeData | null,
+    previousOperation?: ManualModeData | null
   }> {
     const now = new Date()
-    let previousOperation: ManualOperationData | null = null
+    let previousOperation: ManualModeData | null = null
 
     // 既存のマニュアル操作を読み込み
-    const existingOperation = await this.manualOperationStorage.load()
+    const existingOperation = await this.manualModeStorage.load()
     if (existingOperation) {
       previousOperation = existingOperation
       console.log('Canceling existing manual operation')
     }
 
-    const operationData: ManualOperationData = {
+    const operationData: ManualModeData = {
       requestTime: now,
       requester,
-      operationMode: 'active'
+      scheduleState: 'active'
     }
 
     // サービスを起動
     await this.startAllServices()
 
     // データを保存
-    await this.manualOperationStorage.save(operationData)
+    await this.manualModeStorage.save(operationData)
     console.log('Saved manual start operation:', operationData)
 
     const message = previousOperation
@@ -98,30 +98,30 @@ export class ManualOperationController {
   async requestManualStop(requester?: string): Promise<{
     success: boolean,
     message: string,
-    operationData?: ManualOperationData | null,
-    previousOperation?: ManualOperationData | null
+    operationData?: ManualModeData | null,
+    previousOperation?: ManualModeData | null
   }> {
     const now = new Date()
-    let previousOperation: ManualOperationData | null = null
+    let previousOperation: ManualModeData | null = null
 
     // 既存のマニュアル操作を読み込み
-    const existingOperation = await this.manualOperationStorage.load()
+    const existingOperation = await this.manualModeStorage.load()
     if (existingOperation) {
       previousOperation = existingOperation
       console.log('Canceling existing manual operation')
     }
 
-    const operationData: ManualOperationData = {
+    const operationData: ManualModeData = {
       requestTime: now,
       requester,
-      operationMode: 'stop'
+      scheduleState: 'stop'
     }
 
     // サービスを停止
     await this.stopAllServices()
 
     // データを保存
-    await this.manualOperationStorage.save(operationData)
+    await this.manualModeStorage.save(operationData)
     console.log('Saved manual stop operation:', operationData)
 
     const message = previousOperation
@@ -142,14 +142,14 @@ export class ManualOperationController {
     success: boolean,
     message: string,
     scheduledTime?: Date,
-    previousOperation?: ManualOperationData | null,
-    operationData?: ManualOperationData | null
+    previousOperation?: ManualModeData | null,
+    operationData?: ManualModeData | null
   }> {
     const now = new Date()
-    let previousOperation: ManualOperationData | null = null
+    let previousOperation: ManualModeData | null = null
 
     // 既存のマニュアル操作を読み込み
-    const existingOperation = await this.manualOperationStorage.load()
+    const existingOperation = await this.manualModeStorage.load()
     if (existingOperation) {
       previousOperation = existingOperation
       console.log('Canceling existing manual operation')
@@ -165,18 +165,18 @@ export class ManualOperationController {
       }
     }
 
-    const operationData: ManualOperationData = {
+    const operationData: ManualModeData = {
       requestTime: now,
       scheduledTime,
       requester,
-      operationMode: 'active'
+      scheduleState: 'active'
     }
 
     // サービスを起動
     await this.startAllServices()
 
     // データを保存
-    await this.manualOperationStorage.save(operationData)
+    await this.manualModeStorage.save(operationData)
     console.log('Saved manual mode operation:', operationData)
 
     const message = scheduledTime
@@ -198,10 +198,10 @@ export class ManualOperationController {
   async cancelManualMode(): Promise<{
     success: boolean,
     message: string,
-    canceledOperation?: ManualOperationData | null
+    canceledOperation?: ManualModeData | null
   }> {
     // 現在のマニュアル操作を読み込み
-    const existingOperation = await this.manualOperationStorage.load()
+    const existingOperation = await this.manualModeStorage.load()
 
     if (!existingOperation) {
       return {
@@ -211,7 +211,7 @@ export class ManualOperationController {
     }
 
     // データをクリア
-    await this.manualOperationStorage.clear()
+    await this.manualModeStorage.clear()
     console.log('Cleared manual operation data')
 
     const logMessage = existingOperation.scheduledTime
@@ -234,7 +234,7 @@ export class ManualOperationController {
     scheduledStopAt?: Date,
     requester?: string
   }> {
-    const operationData = await this.manualOperationStorage.load()
+    const operationData = await this.manualModeStorage.load()
 
     if (!operationData) {
       return { isActive: false }
@@ -249,7 +249,7 @@ export class ManualOperationController {
   }
 
   // 現在のマニュアル操作データを取得（Schedulerから使用）
-  async getCurrentManualOperationData(): Promise<ManualOperationData | null> {
-    return await this.manualOperationStorage.load()
+  async getCurrentManualModeData(): Promise<ManualModeData | null> {
+    return await this.manualModeStorage.load()
   }
 }

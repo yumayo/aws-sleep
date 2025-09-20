@@ -1,15 +1,15 @@
 import { ScheduleAction } from '../../types/scheduler-types'
 import { calculateScheduleState } from './schedule-state-calculator'
-import { ManualOperationStorage } from '../storage/manual-operation-storage'
+import { ManualModeStorage } from '../storage/manual-mode-storage'
 
 export class Scheduler {
   private readonly scheduleActions: ScheduleAction[]
-  private readonly manualOperationStorage: ManualOperationStorage
+  private readonly manualModeStorage: ManualModeStorage
   private intervalId: NodeJS.Timeout | null = null
 
-  constructor(scheduleActions: ScheduleAction[], manualOperationStorage: ManualOperationStorage) {
+  constructor(scheduleActions: ScheduleAction[], manualModeStorage: ManualModeStorage) {
     this.scheduleActions = scheduleActions
-    this.manualOperationStorage = manualOperationStorage
+    this.manualModeStorage = manualModeStorage
   }
 
   async startScheduler(): Promise<void> {
@@ -38,8 +38,8 @@ export class Scheduler {
   }
 
   async update(now: Date): Promise<void> {
-    const manualOperation = await this.manualOperationStorage.load()
-    if (manualOperation) {
+    const manualMode = await this.manualModeStorage.load()
+    if (manualMode) {
       await this.updateManualMode(now)
     } else {
       await this.updateAutoMode(now)
@@ -47,26 +47,26 @@ export class Scheduler {
   }
 
   async updateManualMode(now: Date): Promise<void> {
-    const manualOperation = await this.manualOperationStorage.load()
-    if (manualOperation === null) {
+    const manualMode = await this.manualModeStorage.load()
+    if (manualMode === null) {
       return
     }
 
-    if (!manualOperation.scheduledTime) {
+    if (!manualMode.scheduledTime) {
       return
     }
 
-    if (now >= manualOperation.scheduledTime) {
-      await this.manualOperationStorage.clear()
+    if (now >= manualMode.scheduledTime) {
+      await this.manualModeStorage.clear()
       console.log('Manual mode operation expired and cleared')
 
     } else {
-      const requestedAt = manualOperation?.requestTime ? new Date(manualOperation.requestTime).toLocaleString('ja-JP') : 'unknown'
-      const scheduledStopAt = manualOperation?.scheduledTime ? new Date(manualOperation.scheduledTime).toLocaleString('ja-JP') : 'not scheduled'
-      const operationMode = manualOperation?.operationMode || 'unknown'
-      
-      console.log(`Manual mode active - maintaining ${operationMode} state (requester: ${manualOperation?.requester}, requested: ${requestedAt}, scheduled stop: ${scheduledStopAt})`)
-      
+      const requestedAt = manualMode?.requestTime ? new Date(manualMode.requestTime).toLocaleString('ja-JP') : 'unknown'
+      const scheduledStopAt = manualMode?.scheduledTime ? new Date(manualMode.scheduledTime).toLocaleString('ja-JP') : 'not scheduled'
+      const operationMode = manualMode?.scheduleState || 'unknown'
+
+      console.log(`Manual mode active - maintaining ${operationMode} state (requester: ${manualMode?.requester}, requested: ${requestedAt}, scheduled stop: ${scheduledStopAt})`)
+
       // operationModeに応じて状態を維持
       for (const scheduleAction of this.scheduleActions) {
         if (operationMode === 'active') {

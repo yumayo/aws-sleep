@@ -5,7 +5,7 @@ export class ManualModeStorage {
   private readonly storage: JsonStorage<ManualModeData>
 
   constructor(dataDir?: string) {
-    this.storage = new JsonStorage<ManualModeData>('manual-mode-storage.json', dataDir)
+    this.storage = new JsonStorage<ManualModeData>('manual-mode.json', dataDir)
   }
 
   async save(data: ManualModeData): Promise<void> {
@@ -18,7 +18,7 @@ export class ManualModeStorage {
       return {
         ...data,
         requestTime: new Date(data.requestTime),
-        scheduledTime: new Date(data.scheduledTime)
+        scheduledTime: data.scheduledTime ? new Date(data.scheduledTime) : undefined
       }
     }
     return null

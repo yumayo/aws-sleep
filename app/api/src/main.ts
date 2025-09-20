@@ -5,9 +5,9 @@ import cookie from '@fastify/cookie'
 import { ECSClient } from '@aws-sdk/client-ecs'
 import { RDSClient } from '@aws-sdk/client-rds'
 import { getHealth } from './controllers/health-controller'
-import { ManualOperationController } from './controllers/manual-operation-controller'
+import { ManualModeController } from './controllers/manual-mode-controller'
 import { AuthController } from './controllers/auth-controller'
-import { ManualOperationStorage } from './models/storage/manual-operation-storage'
+import { ManualModeStorage } from './models/storage/manual-mode-storage'
 import { ConfigStorage } from './models/storage/config-storage'
 import { UserStorage } from './models/auth/user-storage'
 import { SessionManager } from './models/auth/session-manager'
@@ -58,8 +58,8 @@ const rdsClient = new RDSClient({region: config.awsRegion})
 const ecsDesiredCountStorage = new EcsDesiredCountStorage()
 const ecsService = new EcsService(ecsClient, ecsDesiredCountStorage)
 const rdsService = new RdsService(rdsClient)
-const manualOperationStorage = new ManualOperationStorage()
-const manualOperationController = new ManualOperationController(manualOperationStorage, configStorage, ecsService, rdsService)
+const manualModeStorage = new ManualModeStorage()
+const manualModeController = new ManualModeController(manualModeStorage, configStorage, ecsService, rdsService)
 
 fastify.get('/ecs/status', { preHandler: authMiddleware.authenticate }, async (_request, reply) => {
   try {
@@ -113,7 +113,7 @@ fastify.post('/ecs/start', { preHandler: authMiddleware.authenticate }, async (r
     const body = request.body as { requester?: string }
     console.log('Manual start: Starting ECS services')
 
-    const manualResult = await manualOperationController.requestManualStart(body?.requester)
+    const manualResult = await manualModeController.requestManualStart(body?.requester)
 
     return {
       status: 'success',
@@ -131,7 +131,7 @@ fastify.post('/ecs/stop', { preHandler: authMiddleware.authenticate }, async (re
     const body = request.body as { requester?: string }
     console.log('Manual stop: Stopping ECS services')
 
-    const manualResult = await manualOperationController.requestManualStop(body?.requester)
+    const manualResult = await manualModeController.requestManualStop(body?.requester)
 
     return {
       status: 'success',
@@ -149,7 +149,7 @@ fastify.post('/rds/start', { preHandler: authMiddleware.authenticate }, async (r
     const body = request.body as { requester?: string }
     console.log('Manual start: Starting RDS clusters')
 
-    const manualResult = await manualOperationController.requestManualStart(body?.requester)
+    const manualResult = await manualModeController.requestManualStart(body?.requester)
 
     return {
       status: 'success',
@@ -167,7 +167,7 @@ fastify.post('/rds/stop', { preHandler: authMiddleware.authenticate }, async (re
     const body = request.body as { requester?: string }
     console.log('Manual stop: Stopping RDS clusters')
 
-    const manualResult = await manualOperationController.requestManualStop(body?.requester)
+    const manualResult = await manualModeController.requestManualStop(body?.requester)
 
     return {
       status: 'success',
@@ -184,7 +184,7 @@ fastify.post('/start-manual-mode', { preHandler: authMiddleware.authenticate }, 
   try {
     const body = request.body as { scheduledDate?: string }
 
-    const result = await manualOperationController.manualStart(request.user?.username, body.scheduledDate ? new Date(body.scheduledDate) : undefined)
+    const result = await manualModeController.manualStart(request.user?.username, body.scheduledDate ? new Date(body.scheduledDate) : undefined)
 
     if (!result.success) {
       _reply.code(409) // Conflict
@@ -200,7 +200,7 @@ fastify.post('/start-manual-mode', { preHandler: authMiddleware.authenticate }, 
 // マニュアルモード解除
 fastify.post('/cancel-manual-mode', { preHandler: authMiddleware.authenticate }, async (_request, reply) => {
   try {
-    const result = await manualOperationController.cancelManualMode()
+    const result = await manualModeController.cancelManualMode()
 
     if (!result.success) {
       reply.code(404) // Not Found
@@ -216,7 +216,7 @@ fastify.post('/cancel-manual-mode', { preHandler: authMiddleware.authenticate },
 // マニュアルモード状況確認
 fastify.get('/manual-mode-status', { preHandler: authMiddleware.authenticate }, async (_request, reply) => {
   try {
-    const status = await manualOperationController.getManualModeStatus()
+    const status = await manualModeController.getManualModeStatus()
     return { status: 'success', ...status }
   } catch (error) {
     reply.code(500)
@@ -229,7 +229,7 @@ try {
   const ecsScheduleActions = config.ecsItems.map((x) => new EcsScheduleAction(ecsService, x))
   const rdsScheduleActions = config.rdsItems.map((x) => new RdsScheduleAction(rdsService, x))
   const allScheduleActions = [...ecsScheduleActions, ...rdsScheduleActions]
-  const scheduler = new Scheduler(allScheduleActions, manualOperationStorage)
+  const scheduler = new Scheduler(allScheduleActions, manualModeStorage)
 
   await scheduler.startScheduler()
   console.log('ECS and RDS scheduler initialized successfully')
