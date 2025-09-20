@@ -1,6 +1,6 @@
 import { ScheduleAction } from '../../types/scheduler-types'
 import { calculateScheduleState } from './schedule-state-calculator'
-import { ManualModeStorage } from '../storage/manual-mode-storage'
+import { ManualModeStorage } from '../manual-mode/manual-mode-storage'
 
 export class Scheduler {
   private readonly scheduleActions: ScheduleAction[]

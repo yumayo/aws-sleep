@@ -1,6 +1,6 @@
 import { ManualModeData } from '../types/scheduler-types'
-import { ManualModeStorage } from '../models/storage/manual-mode-storage'
-import { ConfigStorage } from '../models/storage/config-storage'
+import { ManualModeStorage } from '../models/manual-mode/manual-mode-storage'
+import { ConfigStorage } from '../models/config/config-storage'
 import { EcsService } from '../models/ecs/ecs-service'
 import { RdsService } from '../models/rds/rds-service'
 
