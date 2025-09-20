@@ -38,11 +38,6 @@ const sessionManager = new SessionManager(sessionDataStorage)
 const authMiddleware = new AuthMiddleware(sessionManager)
 const authController = new AuthController(userStorage, sessionManager, authMiddleware)
 
-// 期限切れセッションの定期クリーンアップ
-setInterval(() => {
-  sessionManager.cleanupExpired()
-}, 5 * 60 * 1000) // 5分毎
-
 // パブリックエンドポイント
 fastify.get('/health', getHealth)
 
@@ -61,7 +56,7 @@ const ecsDesiredCountStorage = new EcsDesiredCountStorage()
 const ecsService = new EcsService(ecsClient, ecsDesiredCountStorage)
 const rdsService = new RdsService(rdsClient)
 const manualModeStorage = new ManualModeStorage()
-const manualModeController = new ManualModeController(manualModeStorage, configStorage, ecsService, rdsService)
+const manualModeController = new ManualModeController(manualModeStorage)
 
 fastify.get('/ecs/status', { preHandler: authMiddleware.authenticate }, async (_request, reply) => {
   try {
@@ -110,83 +105,11 @@ fastify.get('/rds/status', { preHandler: authMiddleware.authenticate }, async (_
   }
 })
 
-fastify.post('/ecs/start', { preHandler: authMiddleware.authenticate }, async (request, reply) => {
-  try {
-    const body = request.body as { requester?: string }
-    console.log('Manual start: Starting ECS services')
-
-    const manualResult = await manualModeController.requestManualStart(body?.requester)
-
-    return {
-      status: 'success',
-      message: 'ECS services start requested (manual mode activated)',
-      manualOperation: manualResult.operationData
-    }
-  } catch (error) {
-    reply.code(500)
-    return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
-  }
-})
-
-fastify.post('/ecs/stop', { preHandler: authMiddleware.authenticate }, async (request, reply) => {
-  try {
-    const body = request.body as { requester?: string }
-    console.log('Manual stop: Stopping ECS services')
-
-    const manualResult = await manualModeController.requestManualStop(body?.requester)
-
-    return {
-      status: 'success',
-      message: 'ECS services stop requested (manual mode activated)',
-      manualOperation: manualResult.operationData
-    }
-  } catch (error) {
-    reply.code(500)
-    return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
-  }
-})
-
-fastify.post('/rds/start', { preHandler: authMiddleware.authenticate }, async (request, reply) => {
-  try {
-    const body = request.body as { requester?: string }
-    console.log('Manual start: Starting RDS clusters')
-
-    const manualResult = await manualModeController.requestManualStart(body?.requester)
-
-    return {
-      status: 'success',
-      message: 'RDS clusters start requested (manual mode activated)',
-      manualOperation: manualResult.operationData
-    }
-  } catch (error) {
-    reply.code(500)
-    return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
-  }
-})
-
-fastify.post('/rds/stop', { preHandler: authMiddleware.authenticate }, async (request, reply) => {
-  try {
-    const body = request.body as { requester?: string }
-    console.log('Manual stop: Stopping RDS clusters')
-
-    const manualResult = await manualModeController.requestManualStop(body?.requester)
-
-    return {
-      status: 'success',
-      message: 'RDS clusters stop requested (manual mode activated)',
-      manualOperation: manualResult.operationData
-    }
-  } catch (error) {
-    reply.code(500)
-    return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
-  }
-})
-
 fastify.post('/start-manual-mode', { preHandler: authMiddleware.authenticate }, async (request, _reply) => {
   try {
     const body = request.body as { scheduledDate?: string }
 
-    const result = await manualModeController.manualStart(request.user?.username, body.scheduledDate ? new Date(body.scheduledDate) : undefined)
+    const result = await manualModeController.startManualMode(request.user!.username, body.scheduledDate ? new Date(body.scheduledDate) : undefined)
 
     if (!result.success) {
       _reply.code(409) // Conflict
@@ -235,6 +158,9 @@ try {
 
   await scheduler.startScheduler()
   console.log('ECS and RDS scheduler initialized successfully')
+
+  // 期限切れセッションの定期クリーンアップ
+  setInterval(async () => { await sessionManager.update() }, 5 * 60 * 1000) // 5分毎
 
   await fastify.listen({ port: 3000, host: '0.0.0.0' })
   console.log('Server listening on port 3000')

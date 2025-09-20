@@ -1,144 +1,14 @@
 import { ManualModeData } from '../types/scheduler-types'
 import { ManualModeStorage } from '../models/manual-mode/manual-mode-storage'
-import { ConfigStorage } from '../models/config/config-storage'
-import { EcsService } from '../models/ecs/ecs-service'
-import { RdsService } from '../models/rds/rds-service'
 
 export class ManualModeController {
   private readonly manualModeStorage: ManualModeStorage
-  private readonly configStorage: ConfigStorage
-  private readonly ecsService: EcsService
-  private readonly rdsService: RdsService
 
-  constructor(
-    manualModeStorage: ManualModeStorage,
-    configStorage: ConfigStorage,
-    ecsService: EcsService,
-    rdsService: RdsService
-  ) {
+  constructor(manualModeStorage: ManualModeStorage) {
     this.manualModeStorage = manualModeStorage
-    this.configStorage = configStorage
-    this.ecsService = ecsService
-    this.rdsService = rdsService
   }
 
-  // ECSとRDSを起動
-  private async startAllServices(): Promise<void> {
-    console.log('Starting all ECS and RDS services')
-    const config = await this.configStorage.load()
-    await Promise.all([
-      ...config.ecsItems.map(ecs =>
-        this.ecsService.startService(ecs.clusterName, ecs.serviceName)
-      ),
-      ...config.rdsItems.map(rds =>
-        this.rdsService.startCluster(rds.clusterName)
-      )
-    ])
-  }
-
-  // ECSとRDSを停止
-  private async stopAllServices(): Promise<void> {
-    console.log('Stopping all ECS and RDS services')
-    const config = await this.configStorage.load()
-    await Promise.all([
-      ...config.ecsItems.map(ecs =>
-        this.ecsService.stopService(ecs.clusterName, ecs.serviceName)
-      ),
-      ...config.rdsItems.map(rds =>
-        this.rdsService.stopCluster(rds.clusterName)
-      )
-    ])
-  }
-
-  // マニュアル起動申請
-  async requestManualStart(requester?: string): Promise<{
-    success: boolean,
-    message: string,
-    operationData?: ManualModeData | null,
-    previousOperation?: ManualModeData | null
-  }> {
-    const now = new Date()
-    let previousOperation: ManualModeData | null = null
-
-    // 既存のマニュアル操作を読み込み
-    const existingOperation = await this.manualModeStorage.load()
-    if (existingOperation) {
-      previousOperation = existingOperation
-      console.log('Canceling existing manual operation')
-    }
-
-    const operationData: ManualModeData = {
-      requestTime: now,
-      requester,
-      scheduleState: 'active'
-    }
-
-    // サービスを起動
-    await this.startAllServices()
-
-    // データを保存
-    await this.manualModeStorage.save(operationData)
-    console.log('Saved manual start operation:', operationData)
-
-    const message = previousOperation
-      ? `Manual start mode activated by ${requester || 'anonymous'} (replaced previous operation)`
-      : `Manual start mode activated by ${requester || 'anonymous'}`
-
-    console.log(message)
-
-    return {
-      success: true,
-      message: message,
-      operationData,
-      previousOperation
-    }
-  }
-
-  // マニュアル停止申請
-  async requestManualStop(requester?: string): Promise<{
-    success: boolean,
-    message: string,
-    operationData?: ManualModeData | null,
-    previousOperation?: ManualModeData | null
-  }> {
-    const now = new Date()
-    let previousOperation: ManualModeData | null = null
-
-    // 既存のマニュアル操作を読み込み
-    const existingOperation = await this.manualModeStorage.load()
-    if (existingOperation) {
-      previousOperation = existingOperation
-      console.log('Canceling existing manual operation')
-    }
-
-    const operationData: ManualModeData = {
-      requestTime: now,
-      requester,
-      scheduleState: 'stop'
-    }
-
-    // サービスを停止
-    await this.stopAllServices()
-
-    // データを保存
-    await this.manualModeStorage.save(operationData)
-    console.log('Saved manual stop operation:', operationData)
-
-    const message = previousOperation
-      ? `Manual stop mode activated by ${requester || 'anonymous'} (replaced previous operation)`
-      : `Manual stop mode activated by ${requester || 'anonymous'}`
-
-    console.log(message)
-
-    return {
-      success: true,
-      message: message,
-      operationData,
-      previousOperation
-    }
-  }
-
-  async manualStart(requester?: string, scheduledTime?: Date): Promise<{
+  async startManualMode(requester: string, scheduledTime?: Date): Promise<{
     success: boolean,
     message: string,
     scheduledTime?: Date,
@@ -155,10 +25,6 @@ export class ManualModeController {
       console.log('Canceling existing manual operation')
     }
 
-    if (!requester) {
-      requester = 'anonymous'
-    }
-
     if (scheduledTime) {
       if (scheduledTime <= now) {
         throw new Error('Scheduled time must be in the future')
@@ -171,9 +37,6 @@ export class ManualModeController {
       requester,
       scheduleState: 'active'
     }
-
-    // サービスを起動
-    await this.startAllServices()
 
     // データを保存
     await this.manualModeStorage.save(operationData)

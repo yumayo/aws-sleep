@@ -220,7 +220,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
 
   useEffect(() => {
     fetchStatus()
-    const interval = setInterval(fetchStatus, 3000)
+    const interval = setInterval(fetchStatus, 30000)
     return () => clearInterval(interval)
   }, [])
 

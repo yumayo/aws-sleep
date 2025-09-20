@@ -52,7 +52,7 @@ export class SessionManager {
     await this.sessionDataStorage.delete(sessionId)
   }
 
-  async cleanupExpired(): Promise<void> {
+  async update(): Promise<void> {
     const sessions = await this.sessionDataStorage.getAllSessions()
     const now = new Date()
     const expiredSessionIds: string[] = []
@@ -65,7 +65,7 @@ export class SessionManager {
     }
 
     if (expiredSessionIds.length > 0) {
-      await this.sessionDataStorage.delete(expiredSessionIds)
+      await this.sessionDataStorage.deleteMultipleSessions(expiredSessionIds)
     }
   }
 }
