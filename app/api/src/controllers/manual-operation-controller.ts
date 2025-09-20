@@ -177,11 +177,11 @@ export class ManualOperationController {
 
     // データを保存
     await this.manualOperationStorage.save(operationData)
-    console.log('Saved delayed stop operation:', operationData)
+    console.log('Saved manual mode operation:', operationData)
 
     const message = scheduledTime
-      ? `Delayed stop scheduled for ${scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} by ${requester}`
-      : `Delayed stop scheduled by ${requester}`
+      ? `Manual mode scheduled for ${scheduledTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} by ${requester}`
+      : `Manual mode scheduled by ${requester}`
 
     console.log(message)
 

@@ -58,7 +58,7 @@ export class Scheduler {
 
     if (now >= manualOperation.scheduledTime) {
       await this.manualOperationStorage.clear()
-      console.log('Delayed stop operation expired and cleared')
+      console.log('Manual mode operation expired and cleared')
 
     } else {
       const requestedAt = manualOperation?.requestTime ? new Date(manualOperation.requestTime).toLocaleString('ja-JP') : 'unknown'

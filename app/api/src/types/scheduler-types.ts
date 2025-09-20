@@ -30,7 +30,7 @@ export interface Config {
   delayHour: number
 }
 
-export interface DelayedStopData {
+export interface ManualModeData {
   requestTime: Date
   scheduledTime: Date
   requester?: string

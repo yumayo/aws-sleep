@@ -1,18 +1,18 @@
-import { DelayedStopData } from '../../types/scheduler-types'
+import { ManualModeData } from '../../types/scheduler-types'
 import { JsonStorage } from '@app/lib'
 
-export class DelayedStopDataStorage {
-  private readonly storage: JsonStorage<DelayedStopData>
+export class ManualModeStorage {
+  private readonly storage: JsonStorage<ManualModeData>
 
   constructor(dataDir?: string) {
-    this.storage = new JsonStorage<DelayedStopData>('delayed-stop-data.json', dataDir)
+    this.storage = new JsonStorage<ManualModeData>('manual-mode-storage.json', dataDir)
   }
 
-  async save(data: DelayedStopData): Promise<void> {
+  async save(data: ManualModeData): Promise<void> {
     await this.storage.save(data)
   }
 
-  async load(): Promise<DelayedStopData | null> {
+  async load(): Promise<ManualModeData | null> {
     const data = await this.storage.load()
     if (data) {
       return {
