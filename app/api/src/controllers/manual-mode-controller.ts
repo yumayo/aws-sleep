@@ -1,4 +1,4 @@
-import { ManualModeData, ScheduleState, Config } from '../types/scheduler-types'
+import { ManualModeData, ScheduleState } from '../types/scheduler-types'
 import { ManualModeStorage } from '../models/manual-mode/manual-mode-storage'
 
 export class ManualModeController {

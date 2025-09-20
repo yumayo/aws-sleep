@@ -47,6 +47,12 @@ interface ManualModeStatusResponse {
   manualScheduleState?: ScheduleState
 }
 
+interface NextScheduleExecutionResponse {
+  status: string
+  lastExecutionTime: string | null
+  nextExecutionTime: string | null
+}
+
 interface DashboardPageProps {
   user: { username: string }
   logout: () => void
@@ -64,18 +70,21 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     scheduledDate: '',
     isIndefinite: false
   })
+  const [lastScheduleExecution, setLastScheduleExecution] = useState<string | null>(null)
+  const [nextScheduleExecution, setNextScheduleExecution] = useState<string | null>(null)
 
   const fetchStatus = async () => {
     try {
       setError(null)
 
-      const [ecsResponse, rdsResponse, manualModeStatusResponse] = await Promise.all([
+      const [ecsResponse, rdsResponse, manualModeStatusResponse, nextScheduleResponse] = await Promise.all([
         fetch('/api/ecs/status'),
         fetch('/api/rds/status'),
-        fetch('/api/manual-mode-status')
+        fetch('/api/manual-mode-status'),
+        fetch('/api/next-schedule-execution')
       ])
 
-      if (!ecsResponse.ok || !rdsResponse.ok || !manualModeStatusResponse.ok) {
+      if (!ecsResponse.ok || !rdsResponse.ok || !manualModeStatusResponse.ok || !nextScheduleResponse.ok) {
         setApiError('APIサーバーエラーが発生しました')
         return
       }
@@ -84,10 +93,13 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       const ecsData: EcsStatusResponse = await ecsResponse.json()
       const rdsData: RdsStatusResponse = await rdsResponse.json()
       const manualModeStatus: ManualModeStatusResponse = await manualModeStatusResponse.json()
+      const nextScheduleData: NextScheduleExecutionResponse = await nextScheduleResponse.json()
 
       setEcsServices(ecsData.services)
       setRdsClusters(rdsData.clusters)
       setManualModeStatus(manualModeStatus)
+      setLastScheduleExecution(nextScheduleData.lastExecutionTime)
+      setNextScheduleExecution(nextScheduleData.nextExecutionTime)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     }
@@ -235,7 +247,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
 
   useEffect(() => {
     fetchStatus()
-    const interval = setInterval(fetchStatus, 30000)
+    const interval = setInterval(fetchStatus, 3000)
     return () => clearInterval(interval)
   }, [])
 
@@ -385,6 +397,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                   <th>停止時刻</th>
                   <th>状態</th>
                   <th>スケジュール状態</th>
+                  <th>マニュアルモード状態</th>
                 </tr>
               </thead>
               <tbody>
@@ -399,7 +412,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                       <td>{service.startDate || '-'}</td>
                       <td>{service.stopDate || '-'}</td>
                       <td>{service.status}</td>
-                      <td><strong>{service.scheduleState}</strong></td>
+                      <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{service.scheduleState}</strong></td>
+                      <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#999' }}>{manualModeStatus?.isActive ? (manualModeStatus?.manualScheduleState || '-') : '-'}</strong></td>
                     </tr>
                   )
                 })}
@@ -424,6 +438,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                   <th>停止時刻</th>
                   <th>状態</th>
                   <th>スケジュール状態</th>
+                  <th>マニュアルモード状態</th>
                 </tr>
               </thead>
               <tbody>
@@ -436,7 +451,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                         <td>{cluster.startDate || '-'}</td>
                         <td>{cluster.stopDate || '-'}</td>
                         <td>{cluster.clusterStatus}</td>
-                        <td><strong>{cluster.scheduleState}</strong></td>
+                        <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{cluster.scheduleState}</strong></td>
+                        <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#999' }}>{manualModeStatus?.isActive ? (manualModeStatus?.manualScheduleState || '-') : '-'}</strong></td>
                       </tr>
                     )
                   }
@@ -448,7 +464,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                       <td>{cluster.startDate || '-'}</td>
                       <td>{cluster.stopDate || '-'}</td>
                       <td>{instance.status}</td>
-                      <td><strong>{cluster.scheduleState}</strong></td>
+                      <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{cluster.scheduleState}</strong></td>
+                      <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#999' }}>{manualModeStatus?.isActive ? (manualModeStatus?.manualScheduleState || '-') : '-'}</strong></td>
                     </tr>
                   ))
                 })}
@@ -460,6 +477,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
 
       <div>
         <p>最終更新: {new Date().toLocaleString('ja-JP')}</p>
+        <p>最終スケジュール実行時刻: {lastScheduleExecution ? new Date(lastScheduleExecution).toLocaleString('ja-JP') : '-'}</p>
+        <p>次のスケジュール実行時刻: {nextScheduleExecution ? new Date(nextScheduleExecution).toLocaleString('ja-JP') : '-'}</p>
         <button onClick={fetchStatus}>更新</button>
       </div>
     </div>

@@ -6,6 +6,8 @@ export class Scheduler {
   private readonly scheduleActions: ScheduleAction[]
   private readonly manualModeStorage: ManualModeStorage
   private intervalId: NodeJS.Timeout | null = null
+  private lastExecutionTime: Date | null = null
+  private nextExecutionTime: Date | null = null
 
   constructor(scheduleActions: ScheduleAction[], manualModeStorage: ManualModeStorage) {
     this.scheduleActions = scheduleActions
@@ -15,12 +17,17 @@ export class Scheduler {
   async startScheduler(): Promise<void> {
     console.log('Starting internal scheduler (1-minute intervals)...')
 
+    // 初回実行時刻を設定
+    this.updateNextExecutionTime()
+
     // 1分ごとにupdateを実行
     this.intervalId = setInterval(async () => {
       const now = new Date()
       try {
         // 前回実行時刻から現在時刻までの範囲で実行
         await this.update(now)
+        this.lastExecutionTime = new Date()
+        this.updateNextExecutionTime()
       } catch (error) {
         console.error('Scheduler interval error:', error)
       }
@@ -84,5 +91,20 @@ export class Scheduler {
       const state = calculateScheduleState(schedule, now)
       await scheduleAction.invoke(state)
     }
+  }
+
+  private updateNextExecutionTime(): void {
+    const now = new Date()
+    const nextExecution = new Date(now)
+    nextExecution.setMinutes(nextExecution.getMinutes() + 1)
+    this.nextExecutionTime = nextExecution
+  }
+
+  getLastExecutionTime(): Date | null {
+    return this.lastExecutionTime
+  }
+
+  getNextExecutionTime(): Date | null {
+    return this.nextExecutionTime
   }
 }

@@ -7,6 +7,7 @@ import { RDSClient } from '@aws-sdk/client-rds'
 import { getHealth } from './controllers/health-controller'
 import { ManualModeController } from './controllers/manual-mode-controller'
 import { AuthController } from './controllers/auth-controller'
+import { SchedulerController } from './controllers/scheduler-controller'
 import { ManualModeStorage } from './models/manual-mode/manual-mode-storage'
 import { ConfigStorage } from './models/config/config-storage'
 import { UserStorage } from './models/auth/user-storage'
@@ -59,6 +60,11 @@ const ecsService = new EcsService(ecsClient, ecsDesiredCountStorage)
 const rdsService = new RdsService(rdsClient)
 const manualModeStorage = new ManualModeStorage()
 const manualModeController = new ManualModeController(manualModeStorage)
+const ecsScheduleActions = config.ecsItems.map((x) => new EcsScheduleAction(ecsService, x))
+const rdsScheduleActions = config.rdsItems.map((x) => new RdsScheduleAction(rdsService, x))
+const allScheduleActions = [...ecsScheduleActions, ...rdsScheduleActions]
+const scheduler = new Scheduler(allScheduleActions, manualModeStorage)
+const schedulerController = new SchedulerController(scheduler)
 
 fastify.get('/ecs/status', { preHandler: authMiddleware.authenticate }, async (_request, reply) => {
   try {
@@ -169,12 +175,18 @@ fastify.get('/manual-mode-status', { preHandler: authMiddleware.authenticate }, 
   }
 })
 
+// スケジュール次回実行時刻取得
+fastify.get('/next-schedule-execution', { preHandler: authMiddleware.authenticate }, async (_request, reply) => {
+  try {
+    const result = schedulerController.getNextScheduleExecution()
+    return { status: 'success', ...result }
+  } catch (error) {
+    reply.code(500)
+    return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
+  }
+})
+
 try {
-  const config = await configStorage.load()
-  const ecsScheduleActions = config.ecsItems.map((x) => new EcsScheduleAction(ecsService, x))
-  const rdsScheduleActions = config.rdsItems.map((x) => new RdsScheduleAction(rdsService, x))
-  const allScheduleActions = [...ecsScheduleActions, ...rdsScheduleActions]
-  const scheduler = new Scheduler(allScheduleActions, manualModeStorage)
 
   await scheduler.startScheduler()
   console.log('ECS and RDS scheduler initialized successfully')
