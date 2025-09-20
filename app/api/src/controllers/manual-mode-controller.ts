@@ -1,14 +1,11 @@
 import { ManualModeData, ScheduleState, Config } from '../types/scheduler-types'
 import { ManualModeStorage } from '../models/manual-mode/manual-mode-storage'
-import { calculateScheduleState } from '../models/scheduler/schedule-state-calculator'
 
 export class ManualModeController {
   private readonly manualModeStorage: ManualModeStorage
-  private readonly config: Config
 
-  constructor(manualModeStorage: ManualModeStorage, config: Config) {
+  constructor(manualModeStorage: ManualModeStorage) {
     this.manualModeStorage = manualModeStorage
-    this.config = config
   }
 
   async startManualMode(requester: string, scheduledTime: Date | undefined, scheduleState: ScheduleState): Promise<{

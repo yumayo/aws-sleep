@@ -58,7 +58,7 @@ const ecsDesiredCountStorage = new EcsDesiredCountStorage()
 const ecsService = new EcsService(ecsClient, ecsDesiredCountStorage)
 const rdsService = new RdsService(rdsClient)
 const manualModeStorage = new ManualModeStorage()
-const manualModeController = new ManualModeController(manualModeStorage, config)
+const manualModeController = new ManualModeController(manualModeStorage)
 
 fastify.get('/ecs/status', { preHandler: authMiddleware.authenticate }, async (_request, reply) => {
   try {
