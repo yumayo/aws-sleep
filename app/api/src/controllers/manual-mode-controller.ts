@@ -1,4 +1,4 @@
-import { ManualModeData } from '../types/scheduler-types'
+import { ManualModeData, ScheduleState } from '../types/scheduler-types'
 import { ManualModeStorage } from '../models/manual-mode/manual-mode-storage'
 
 export class ManualModeController {
@@ -8,7 +8,7 @@ export class ManualModeController {
     this.manualModeStorage = manualModeStorage
   }
 
-  async startManualMode(requester: string, scheduledTime?: Date): Promise<{
+  async startManualMode(requester: string, scheduledTime: Date | undefined, scheduleState: ScheduleState): Promise<{
     success: boolean,
     message: string,
     scheduledTime?: Date,
@@ -35,7 +35,7 @@ export class ManualModeController {
       requestTime: now,
       scheduledTime,
       requester,
-      scheduleState: 'active'
+      scheduleState: scheduleState
     }
 
     // データを保存

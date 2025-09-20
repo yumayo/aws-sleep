@@ -88,33 +88,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     }
   }
 
-  const stopAll = async () => {
-    if (!confirm('全サーバーを停止してマニュアルモードに変更しますか？\n停止申請を行うとサーバーが停止され、手動で解除するまで停止状態を維持します。')) {
-      return
-    }
-
-    try {
-      setOperationLoading(true)
-      setError(null)
-
-      const [ecsResponse, rdsResponse] = await Promise.all([
-        fetch('/api/ecs/stop', { method: 'POST' }),
-        fetch('/api/rds/stop', { method: 'POST' })
-      ])
-
-      if (!ecsResponse.ok || !rdsResponse.ok) {
-        throw new Error('停止に失敗しました')
-      }
-
-      await fetchStatus()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
-    } finally {
-      setOperationLoading(false)
-    }
-  }
-
-  const requestStart = () => {
+  const setupStartRequestForm = () => {
     const now = new Date()
     const defaultTime = new Date(now.getTime() + 60 * 60 * 1000)
 
@@ -164,8 +138,12 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
 
       const response = await fetch('/api/start-manual-mode', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
-          scheduledDate: scheduledDate ? scheduledDate.toISOString() : null
+          scheduledDate: scheduledDate ? scheduledDate.toISOString() : null,
+          scheduleState: 'active'
         })
       })
 
@@ -183,12 +161,44 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     }
   }
 
-  const cancelStartForm = () => {
+  const submitStopRequest = async () => {
+    if (!confirm('全サーバーを停止してマニュアルモードに変更しますか？\n停止申請を行うとサーバーが停止され、手動で解除するまで停止状態を維持します。')) {
+      return
+    }
+
+    try {
+      setOperationLoading(true)
+      setError(null)
+
+      const response = await fetch('/api/start-manual-mode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          scheduleState: 'stop'
+        })
+      })
+
+      if (!response.ok) {
+        setApiError('停止申請に失敗しました。')
+        return
+      }
+
+      await fetchStatus()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      setOperationLoading(false)
+    }
+  }
+
+  const setupCancelManualModeForm = () => {
     setShowDelayForm(false)
     setDelayFormData({ scheduledDate: '', isIndefinite: false })
   }
 
-  const cancelDelay = async () => {
+  const cancelManualMode = async () => {
     if (!confirm('マニュアルモードを解除してスケジューラーモードに戻しますか？')) {
       return
     }
@@ -295,7 +305,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
           <p>マニュアルモードモード申請日時: {delayStatus?.requestedAt ? new Date(delayStatus.requestedAt).toLocaleString('ja-JP') : '-'}</p>
           <p>マニュアルモードモード解除予定日時: {delayStatus?.scheduledStopAt ? new Date(delayStatus.scheduledStopAt).toLocaleString('ja-JP') : '-'}</p>
           <div>
-            <button onClick={requestStart} disabled={operationLoading || showDelayForm}>
+            <button onClick={setupStartRequestForm} disabled={operationLoading || showDelayForm}>
               サーバーを起動する
             </button>
           </div>
@@ -331,7 +341,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                   <button type="submit" disabled={operationLoading} style={{ marginRight: '10px' }}>
                     申請する
                   </button>
-                  <button type="button" onClick={cancelStartForm} disabled={operationLoading}>
+                  <button type="button" onClick={setupCancelManualModeForm} disabled={operationLoading}>
                     キャンセル
                   </button>
                 </div>
@@ -339,12 +349,12 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
             </div>
           )}
           <div>
-            <button onClick={stopAll} disabled={operationLoading}>
+            <button onClick={submitStopRequest} disabled={operationLoading}>
               サーバーを停止する
             </button>
           </div>
           <div>
-            <button onClick={cancelDelay} disabled={operationLoading || !delayStatus?.isActive}>
+            <button onClick={cancelManualMode} disabled={operationLoading || !delayStatus?.isActive}>
               マニュアルモードを解除する
             </button>
           </div>

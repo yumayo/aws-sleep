@@ -19,6 +19,7 @@ import { RdsService } from './models/rds/rds-service'
 import { Scheduler } from './models/scheduler/scheduler'
 import { EcsScheduleAction } from './models/ecs/ecs-schedule-action'
 import { RdsScheduleAction } from './models/rds/rds-schedule-action'
+import { ScheduleState } from './types/scheduler-types'
 
 const fastify = Fastify({
   logger: true
@@ -107,9 +108,13 @@ fastify.get('/rds/status', { preHandler: authMiddleware.authenticate }, async (_
 
 fastify.post('/start-manual-mode', { preHandler: authMiddleware.authenticate }, async (request, _reply) => {
   try {
-    const body = request.body as { scheduledDate?: string }
+    const body = request.body as { scheduledDate?: string, scheduleState: ScheduleState }
 
-    const result = await manualModeController.startManualMode(request.user!.username, body.scheduledDate ? new Date(body.scheduledDate) : undefined)
+    const result = await manualModeController.startManualMode(
+      request.user!.username,
+      body.scheduledDate ? new Date(body.scheduledDate) : undefined,
+      body.scheduleState
+    )
 
     if (!result.success) {
       _reply.code(409) // Conflict
