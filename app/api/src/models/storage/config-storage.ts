@@ -1,5 +1,5 @@
 import { JsonStorage } from '@app/lib'
-import { Config } from '../types/scheduler-types'
+import { Config } from '../../types/scheduler-types'
 
 export class ConfigStorage {
   private readonly storage: JsonStorage<Config>

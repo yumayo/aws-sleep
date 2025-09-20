@@ -1,6 +1,6 @@
 import { ManualOperationData } from '../types/scheduler-types'
-import { ManualOperationStorage } from '../models/manual-operation-storage'
-import { ConfigStorage } from '../models/config-storage'
+import { ManualOperationStorage } from '../models/storage/manual-operation-storage'
+import { ConfigStorage } from '../models/storage/config-storage'
 import { EcsService } from '../models/ecs/ecs-service'
 import { RdsService } from '../models/rds/rds-service'
 

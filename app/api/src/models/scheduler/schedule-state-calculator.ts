@@ -1,5 +1,5 @@
 import JapanaseHolidays from 'japanese-holidays'
-import { ScheduleState, Schedule } from '../types/scheduler-types'
+import { ScheduleState, Schedule } from '../../types/scheduler-types'
 
 export function calculateScheduleState(
   schedule: Schedule,

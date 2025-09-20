@@ -1,4 +1,4 @@
-import { Schedule, ScheduleAction, ScheduleConfigEcsItem } from "../../types/scheduler-types"
+import { Schedule, ScheduleAction, ScheduleState, ScheduleConfigEcsItem } from "../../types/scheduler-types"
 import { EcsService } from "./ecs-service"
 
 export class EcsScheduleAction implements ScheduleAction {
@@ -14,7 +14,7 @@ export class EcsScheduleAction implements ScheduleAction {
     return this.config
   }
 
-  async invoke(state: 'active' | 'stop'): Promise<void> {
+  async invoke(state: ScheduleState): Promise<void> {
     if (state === 'active') {
       await this.ecsService.startService(this.config.clusterName, this.config.serviceName)
     } else if (state === 'stop') {

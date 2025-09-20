@@ -1,4 +1,4 @@
-import { ManualOperationData } from '../types/scheduler-types'
+import { ManualOperationData } from '../../types/scheduler-types'
 import { JsonStorage } from '@app/lib'
 
 export class ManualOperationStorage {

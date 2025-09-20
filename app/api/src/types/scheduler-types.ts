@@ -2,7 +2,7 @@ export type ScheduleState = 'active' | 'stop'
 
 export interface ScheduleAction {
   getSchedule: () => Schedule
-  invoke: (state: 'active' | 'stop') => Promise<void>
+  invoke: (state: ScheduleState) => Promise<void>
 }
 
 export interface Schedule {

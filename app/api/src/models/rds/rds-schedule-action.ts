@@ -1,4 +1,4 @@
-import { Schedule, ScheduleAction, ScheduleConfigRdsItem } from "../../types/scheduler-types"
+import { Schedule, ScheduleAction, ScheduleState, ScheduleConfigRdsItem } from "../../types/scheduler-types"
 import { RdsService } from "./rds-service"
 
 export class RdsScheduleAction implements ScheduleAction {
@@ -14,7 +14,7 @@ export class RdsScheduleAction implements ScheduleAction {
     return this.config
   }
 
-  async invoke(state: 'active' | 'stop'): Promise<void> {
+  async invoke(state: ScheduleState): Promise<void> {
     if (state === 'active') {
       await this.rdsService.startCluster(this.config.clusterName)
     } else if (state === 'stop') {

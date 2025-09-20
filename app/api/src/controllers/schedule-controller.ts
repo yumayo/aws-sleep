@@ -1,6 +1,6 @@
 import { DelayedStopData } from '../types/scheduler-types'
-import { DelayedStopDataStorage } from '../models/delayed-stop-data-storage'
-import { ConfigStorage } from '../models/config-storage'
+import { DelayedStopDataStorage } from '../models/storage/delayed-stop-data-storage'
+import { ConfigStorage } from '../models/storage/config-storage'
 
 export class SchedulerController {
   private readonly delayedStopDataStorage: DelayedStopDataStorage
