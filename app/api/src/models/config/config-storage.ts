@@ -16,24 +16,38 @@ export class ConfigStorage {
     }
     
     // 設定値の検証
-    if (!config.ecsItems || config.ecsItems.length === 0) {
-      throw new Error('Schedule config must have at least one item')
+    if (config.ecsItems) {
+      for (const item of config.ecsItems) {
+        if (!item.clusterName || !item.serviceName) {
+          throw new Error('Each ECS config item must have clusterName and serviceName')
+        }
+
+        if (item.startDate === undefined || item.stopDate === undefined) {
+          throw new Error('ECS config must have startDate and stopDate configuration')
+        }
+
+        if (!this.isValidTimeFormat(item.startDate) || !this.isValidTimeFormat(item.stopDate)) {
+          throw new Error('Time format must be HH:MM (e.g., 09:00, 21:30)')
+        }
+      }
     }
     
-    for (const item of config.ecsItems) {
-      if (!item.clusterName || !item.serviceName) {
-        throw new Error('Each schedule config item must have clusterName and serviceName')
-      }
+    if (config.rdsItems) {
+      for (const item of config.rdsItems) {
+        if (!item.clusterName) {
+          throw new Error('Each RDS config item must have clusterName')
+        }
 
-      if (item.startDate === undefined || item.stopDate === undefined) {
-        throw new Error('Schedule config must have startDate and stopDate configuration')
-      }
+        if (item.startDate === undefined || item.stopDate === undefined) {
+          throw new Error('RDS config must have startDate and stopDate configuration')
+        }
 
-      if (!this.isValidTimeFormat(item.startDate) || !this.isValidTimeFormat(item.stopDate)) {
-        throw new Error('Time format must be HH:MM (e.g., 09:00, 21:30)')
+        if (!this.isValidTimeFormat(item.startDate) || !this.isValidTimeFormat(item.stopDate)) {
+          throw new Error('Time format must be HH:MM (e.g., 09:00, 21:30)')
+        }
       }
     }
-    
+
     return config
   }
 
