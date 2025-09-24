@@ -84,22 +84,46 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
         fetch('/api/next-schedule-execution')
       ])
 
-      if (!ecsResponse.ok || !rdsResponse.ok || !manualModeStatusResponse.ok || !nextScheduleResponse.ok) {
-        setApiError('APIサーバーエラーが発生しました')
-        return
+      const errorDetails = []
+
+      if (ecsResponse.ok) {
+        const ecsData: EcsStatusResponse = await ecsResponse.json()
+        setEcsServices(ecsData.services)
+      } else {
+        const errorText = await ecsResponse.text()
+        errorDetails.push(`ECS Status API (${ecsResponse.status}): ${errorText}`)
       }
 
-      setApiError(null)
-      const ecsData: EcsStatusResponse = await ecsResponse.json()
-      const rdsData: RdsStatusResponse = await rdsResponse.json()
-      const manualModeStatus: ManualModeStatusResponse = await manualModeStatusResponse.json()
-      const nextScheduleData: NextScheduleExecutionResponse = await nextScheduleResponse.json()
+      if (rdsResponse.ok) {
+        const rdsData: RdsStatusResponse = await rdsResponse.json()
+        setRdsClusters(rdsData.clusters)
+      } else {
+        const errorText = await rdsResponse.text()
+        errorDetails.push(`RDS Status API (${rdsResponse.status}): ${errorText}`)
+      }
 
-      setEcsServices(ecsData.services)
-      setRdsClusters(rdsData.clusters)
-      setManualModeStatus(manualModeStatus)
-      setLastScheduleExecution(nextScheduleData.lastExecutionTime)
-      setNextScheduleExecution(nextScheduleData.nextExecutionTime)
+      if (manualModeStatusResponse.ok) {
+        const manualModeStatus: ManualModeStatusResponse = await manualModeStatusResponse.json()
+        setManualModeStatus(manualModeStatus)
+      } else {
+        const errorText = await manualModeStatusResponse.text()
+        errorDetails.push(`Manual Mode Status API (${manualModeStatusResponse.status}): ${errorText}`)
+      }
+
+      if (nextScheduleResponse.ok) {
+        const nextScheduleData: NextScheduleExecutionResponse = await nextScheduleResponse.json()
+        setLastScheduleExecution(nextScheduleData.lastExecutionTime)
+        setNextScheduleExecution(nextScheduleData.nextExecutionTime)
+      } else {
+        const errorText = await nextScheduleResponse.text()
+        errorDetails.push(`Next Schedule API (${nextScheduleResponse.status}): ${errorText}`)
+      }
+
+      if (errorDetails.length > 0) {
+        setApiError(`APIサーバーエラーが発生しました:\n\n${errorDetails.join('\n\n')}`)
+      } else {
+        setApiError(null)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     }
@@ -165,7 +189,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       })
 
       if (!response.ok) {
-        setApiError('起動申請に失敗しました。')
+        const errorText = await response.text()
+        setApiError(`起動申請に失敗しました (${response.status}):\n\n${errorText}`)
         return
       }
 
@@ -198,7 +223,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       })
 
       if (!response.ok) {
-        setApiError('停止申請に失敗しました。')
+        const errorText = await response.text()
+        setApiError(`停止申請に失敗しました (${response.status}):\n\n${errorText}`)
         return
       }
 
@@ -229,7 +255,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       })
 
       if (!response.ok) {
-        setApiError('マニュアルモード解除に失敗しました。')
+        const errorText = await response.text()
+        setApiError(`マニュアルモード解除に失敗しました (${response.status}):\n\n${errorText}`)
         return
       }
 
