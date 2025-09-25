@@ -5,64 +5,13 @@
 
 # 初回セットアップ
 
-## 1. 【初回セットアップ】【必須】makeコマンドの実行
+## 1. makeコマンドでセットアップを行う
 
 ```sh
-make
+make setup
 ```
 
-## 2. 【初回セットアップ】【必須】AWSのIAMユーザーの作成とアクセスキーの発行
-
-### 2.1. 【初回セットアップ】【必須】apiコンテナのAWSアクセスキーの設定
-api-container-iam-policy.json が env/api/.env に必要なポリシーです。  
-IAMユーザーを作成して、直接ポリシーをアタッチし、アクセスキーを発行して `env/api/.env` に設定してください。
-
-### 2.2. 【初回セットアップ】【オプション】scriptコンテナのAWSアクセスキーの設定
-
-**テスト用のECSとRDSを作成して確認するためのものですので、実稼働する場合は不要です。**
-
-script-container-iam-policy.json が env/script/.env に必要なポリシーです。
-IAMユーザーを作成して、直接ポリシーをアタッチし、アクセスキーを発行して `env/script/.env` に設定してください。
-
-## 3. 【初回セットアップ】【必須】scriptコンテナのnpm install
-
-```sh
-docker compose up -d
-```
-
-```sh
-docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/script && npm install'
-```
-
-## 4. 【初回セットアップ】【必須】libコンテナのnpm install
-
-```sh
-docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/lib && npm install'
-```
-
-```sh
-docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/lib && npm run build'
-```
-
-## 5. 【初回セットアップ】【必須】apiコンテナのnpm install
-
-```sh
-docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/api && npm install'
-```
-
-## 6. 【初回セットアップ】【必須】webコンテナのnpm install
-
-```sh
-docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/web && npm install'
-```
-
-## 7. 【初回セットアップ】【必須】管理者ユーザーを作成
-
-```sh
-docker compose exec script cli manage-users add admin password123
-```
-
-## 8. 【初回セットアップ】【必須】夜間、休日停止する設定を行う
+## 2. 夜間、休日停止する設定を行う
 
 下記のような設定をしたjsonファイルを app/api/data/config.json に置く。
 
@@ -102,9 +51,14 @@ docker compose exec script cli manage-users add admin password123
 }
 ```
 
-## 9. 【初回セットアップ】【オプション】AWS環境がない場合にテスト用の環境を整えるための設定
+## 動作確認
 
-**テスト用のECSとRDSを作成して確認するためのものですので、実稼働する場合は不要です。**
+http://localhost:5173 にアクセス  
+初回セットアップ通りなら、初期パスワード admin と password123 でログインできます。
+
+# **以下はメモ**
+
+## AWS環境がない場合にテスト用の環境を整えるための設定
 
 下記のような設定をしたjsonファイルを app/api/data/aws-config.json に置く。
 
@@ -128,13 +82,6 @@ docker compose exec script cli manage-users add admin password123
   "awsAccountId": "123456789012"
 }
 ```
-
-# 動作確認
-
-http://localhost:5173 にアクセス  
-初回セットアップ通りなら、初期パスワード admin と password123 でログインできます。
-
-# **以下はメモ**
 
 ## TODO
 
