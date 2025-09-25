@@ -13,6 +13,7 @@ export interface Schedule {
 export interface ScheduleConfigEcsItem {
   clusterName: string
   serviceName: string
+  desiredCount: number
   startDate: string
   stopDate: string
 }

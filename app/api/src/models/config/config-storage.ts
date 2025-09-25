@@ -22,6 +22,10 @@ export class ConfigStorage {
           throw new Error('Each ECS config item must have clusterName and serviceName')
         }
 
+        if (typeof item.desiredCount !== 'number' || item.desiredCount < 0) {
+          throw new Error('ECS config must have valid desiredCount (positive number)')
+        }
+
         if (item.startDate === undefined || item.stopDate === undefined) {
           throw new Error('ECS config must have startDate and stopDate configuration')
         }
@@ -63,5 +67,14 @@ export class ConfigStorage {
   async exists(): Promise<boolean> {
     return this.storage.exists()
   }
+
+  async getDesiredCount(clusterName: string, serviceName: string): Promise<number | null> {
+    const config = await this.load()
+    const ecsItem = config.ecsItems?.find(item => 
+      item.clusterName === clusterName && item.serviceName === serviceName
+    )
+    return ecsItem?.desiredCount ?? null
+  }
+
 
 }

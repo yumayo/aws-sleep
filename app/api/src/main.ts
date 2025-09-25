@@ -15,7 +15,6 @@ import { SessionManager } from './models/auth/session-manager'
 import { SessionDataStorage } from './models/auth/session-data-storage'
 import { AuthMiddleware } from './middleware/auth-middleware'
 import { EcsService } from './models/ecs/ecs-service'
-import { EcsDesiredCountStorage } from './models/ecs/ecs-desired-count-storage'
 import { RdsService } from './models/rds/rds-service'
 import { Scheduler } from './models/scheduler/scheduler'
 import { EcsScheduleAction } from './models/ecs/ecs-schedule-action'
@@ -55,8 +54,7 @@ const config = await configStorage.load()
 
 const ecsClient = new ECSClient({region: config.awsRegion})
 const rdsClient = new RDSClient({region: config.awsRegion})
-const ecsDesiredCountStorage = new EcsDesiredCountStorage()
-const ecsService = new EcsService(ecsClient, ecsDesiredCountStorage)
+const ecsService = new EcsService(ecsClient, configStorage)
 const rdsService = new RdsService(rdsClient)
 const manualModeStorage = new ManualModeStorage()
 const manualModeController = new ManualModeController(manualModeStorage)

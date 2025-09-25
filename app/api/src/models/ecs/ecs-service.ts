@@ -1,18 +1,19 @@
 import { ECSClient, UpdateServiceCommand, DescribeServicesCommand } from '@aws-sdk/client-ecs'
-import { EcsDesiredCountStorage } from './ecs-desired-count-storage'
+import { ConfigStorage } from '../config/config-storage'
 
 export class EcsService {
   private readonly client: ECSClient
-  private readonly ecsDesiredCountStorage: EcsDesiredCountStorage
+  private readonly configStorage: ConfigStorage
 
-  constructor(ecsClient: ECSClient, ecsDesiredCountStorage: EcsDesiredCountStorage) {
+  constructor(ecsClient: ECSClient, configStorage: ConfigStorage) {
     this.client = ecsClient
-    this.ecsDesiredCountStorage = ecsDesiredCountStorage
+    this.configStorage = configStorage
   }
 
   async startService(clusterName: string, serviceName: string): Promise<void> {
-    // EcsDesiredCountStorageから保存された値を使用
-    const desiredCount = await this.ecsDesiredCountStorage.getDesiredCount(clusterName, serviceName)
+    // configから初期値を取得
+    const desiredCount = await this.configStorage.getDesiredCount(clusterName, serviceName)
+    
     if (desiredCount === null) {
       console.log(`Skipping start for ${clusterName}/${serviceName}: no desired count available`)
       return
@@ -27,33 +28,7 @@ export class EcsService {
 
   async stopService(clusterName: string, serviceName: string): Promise<void> {
     console.log(`Stopping ECS service: ${serviceName}`)
-    // 停止前に現在のdesired countを記録
-    const serviceStatus = await this.getServiceStatus(clusterName, serviceName)
-    if (serviceStatus.desiredCount > 0) {
-      await this.ecsDesiredCountStorage.setDesiredCount(clusterName, serviceName, serviceStatus.desiredCount)
-    }
     await this.updateServiceDesiredCount(clusterName, serviceName, 0)
-  }
-
-  async getServiceDesiredCount(clusterName: string, serviceName: string): Promise<number> {
-    try {
-      const command = new DescribeServicesCommand({ 
-        cluster: clusterName,
-        services: [serviceName]
-      })
-
-      const response = await this.client.send(command)
-      const service = response.services?.[0]
-      
-      if (!service) {
-        throw new Error(`Service ${serviceName} not found in cluster ${clusterName}`)
-      }
-
-      return service.desiredCount || 0
-    } catch (error) {
-      console.error(`Failed to get ECS service ${serviceName} info:`, error)
-      throw error
-    }
   }
 
   async getServiceStatus(clusterName: string, serviceName: string): Promise<{
