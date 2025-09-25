@@ -54,8 +54,8 @@ services:
     volumes:
       - ./app/web:/workspace/app/web
       - ./app/lib:/workspace/app/lib
-    ports:
-      - "5173:5173"
+    expose:
+      - "5173"
     user: ubuntu
     tty: true
     stop_grace_period: 0s
@@ -75,6 +75,13 @@ services:
     user: ubuntu
     tty: true
     stop_grace_period: 0s
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    ports:
+      - "80:80"
 
 volumes:
   docker-data:

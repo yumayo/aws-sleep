@@ -78,10 +78,10 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       setError(null)
 
       const [ecsResponse, rdsResponse, manualModeStatusResponse, nextScheduleResponse] = await Promise.all([
-        fetch('/api/ecs/status'),
-        fetch('/api/rds/status'),
-        fetch('/api/manual-mode-status'),
-        fetch('/api/next-schedule-execution')
+        fetch('/server-monitoring-api/ecs/status'),
+        fetch('/server-monitoring-api/rds/status'),
+        fetch('/server-monitoring-api/manual-mode-status'),
+        fetch('/server-monitoring-api/next-schedule-execution')
       ])
 
       const errorDetails = []
@@ -177,7 +177,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       setOperationLoading(true)
       setError(null)
 
-      const response = await fetch('/api/start-manual-mode', {
+      const response = await fetch('/server-monitoring-api/start-manual-mode', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -212,7 +212,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       setOperationLoading(true)
       setError(null)
 
-      const response = await fetch('/api/start-manual-mode', {
+      const response = await fetch('/server-monitoring-api/start-manual-mode', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -250,7 +250,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       setOperationLoading(true)
       setError(null)
 
-      const response = await fetch('/api/cancel-manual-mode', {
+      const response = await fetch('/server-monitoring-api/cancel-manual-mode', {
         method: 'POST'
       })
 

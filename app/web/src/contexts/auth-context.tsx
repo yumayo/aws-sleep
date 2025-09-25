@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode } ) {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch('/api/auth/me')
+      const response = await fetch('/server-monitoring-api/auth/me')
       if (response.ok) {
         const data = await response.json()
         setUser(data.user)
@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode } ) {
       setError(null)
       setLoading(true)
 
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/server-monitoring-api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode } ) {
 
   const logout = async (): Promise<void> => {
     try {
-      await fetch('/api/auth/logout', {
+      await fetch('/server-monitoring-api/auth/logout', {
         method: 'POST',
       })
     } catch (err) {
