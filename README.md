@@ -72,18 +72,21 @@ docker compose exec script cli manage-users add admin password123
     {
       "clusterName": "sample-cluster",
       "serviceName": "sample-service-1",
+      "desiredCount": 1,
       "startDate": "9:00",
       "stopDate": "21:00"
     },
     {
       "clusterName": "sample-cluster",
       "serviceName": "sample-service-2",
+      "desiredCount": 1,
       "startDate": "9:00",
       "stopDate": "21:00"
     },
     {
       "clusterName": "sample-cluster",
       "serviceName": "sample-service-3",
+      "desiredCount": 1,
       "startDate": "9:00",
       "stopDate": "21:00"
     }
