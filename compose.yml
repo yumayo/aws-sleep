@@ -82,6 +82,3 @@ services:
       dockerfile: docker/nginx/Dockerfile
     ports:
       - "80:80"
-
-volumes:
-  docker-data:
