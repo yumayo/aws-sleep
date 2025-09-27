@@ -345,10 +345,24 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
             早朝の勤務や残業、休日に出勤された場合に使用することを想定しています。<br />
           </p>
           <strong>{manualModeStatus?.isActive ? '現在はマニュアルモード中です。' : '現在はマニュアルモードではありません。'}</strong>
-          <p>マニュアルモード設定状態: <strong>{manualModeStatus?.manualScheduleState || '-'}</strong></p>
-          <p>マニュアルモードモード申請者: {manualModeStatus?.requester || '-'}</p>
-          <p>マニュアルモードモード申請日時: {manualModeStatus?.requestedAt ? new Date(manualModeStatus.requestedAt).toLocaleString('ja-JP') : '-'}</p>
-          <p>マニュアルモードモード解除予定日時: {manualModeStatus?.scheduledStopAt ? new Date(manualModeStatus.scheduledStopAt).toLocaleString('ja-JP') : '-'}</p>
+          <table border={1}>
+            <thead>
+              <tr>
+                <th>マニュアルモード設定状態</th>
+                <th>申請者</th>
+                <th>申請日時</th>
+                <th>解除予定日時</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{manualModeStatus?.manualScheduleState || '-'}</td>
+                <td>{manualModeStatus?.requester || '-'}</td>
+                <td>{manualModeStatus?.requestedAt ? new Date(manualModeStatus.requestedAt).toLocaleString('ja-JP') : '-'}</td>
+                <td>{manualModeStatus?.scheduledStopAt ? new Date(manualModeStatus.scheduledStopAt).toLocaleString('ja-JP') : '-'}</td>
+              </tr>
+            </tbody>
+          </table>
           <div>
             <button onClick={setupManualModeStartForm} disabled={operationLoading || showManualModeForm}>
               サーバーを起動する
