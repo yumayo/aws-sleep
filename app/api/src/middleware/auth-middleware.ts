@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
-import { SessionManager } from '../models/auth/session-manager.js'
 import { AuthUser } from '../types/auth-types.js'
+import { JwtUtil } from '../models/auth/jwt-util.js'
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -13,41 +13,46 @@ export class AuthMiddleware {
   private readonly RATE_LIMIT_WINDOW = 60 * 1000 // 1分
   private readonly MAX_ATTEMPTS = 5
 
-  constructor(private sessionManager: SessionManager) {}
+  constructor(
+    private jwtUtil: JwtUtil
+  ) {}
 
   authenticate = async (request: FastifyRequest, reply: FastifyReply) => {
     console.log('認証チェック開始:', {
       url: request.url,
       method: request.method,
-      cookies: Object.keys(request.cookies || {}),
+      hasAuthorization: !!request.headers.authorization,
       hasCookies: !!request.cookies
     })
 
-    const sessionId = request.cookies.sessionId
-    console.log('セッションID確認:', {
-      sessionId: sessionId ? sessionId.substring(0, 8) + '...' : 'なし',
-      cookiesReceived: request.cookies
-    })
+    // Cookieから取得を優先、次にAuthorizationヘッダーから取得
+    let token: string | undefined
+    if (request.cookies?.auth_token) {
+      token = request.cookies.auth_token
+      console.log('Cookieからトークン取得:', {
+        tokenPrefix: token.substring(0, 10) + '...'
+      })
+    } else if (request.headers.authorization?.startsWith('Bearer ')) {
+      token = request.headers.authorization.slice(7) // "Bearer "を除去
+      console.log('Authorizationヘッダーからトークン取得:', {
+        tokenPrefix: token.substring(0, 10) + '...'
+      })
+    }
 
-    if (!sessionId) {
-      console.log('認証失敗: セッションIDなし')
+    if (!token) {
+      console.log('認証失敗: トークンなし')
       reply.code(401)
       return reply.send({ error: '認証が必要です' })
     }
 
-    const user = await this.sessionManager.update(sessionId, reply)
-    console.log('セッション検証結果:', {
-      sessionId: sessionId.substring(0, 8) + '...',
-      user: user ? { username: user.username } : null
-    })
-
-    if (!user) {
-      console.log('認証失敗: セッション無効')
-      reply.clearCookie('sessionId')
+    const tokenPayload = this.jwtUtil.verifyToken(token)
+    if (!tokenPayload) {
+      console.log('認証失敗: トークン無効')
       reply.code(401)
-      return reply.send({ error: 'セッションが無効です' })
+      return reply.send({ error: 'トークンが無効です' })
     }
 
+    const user: AuthUser = { username: tokenPayload.username }
     console.log('認証成功:', { username: user.username, url: request.url })
     request.user = user
   }

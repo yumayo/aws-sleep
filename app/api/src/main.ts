@@ -11,9 +11,8 @@ import { SchedulerController } from './controllers/scheduler-controller'
 import { ManualModeStorage } from './models/manual-mode/manual-mode-storage'
 import { ConfigStorage } from './models/config/config-storage'
 import { UserStorage } from './models/auth/user-storage'
-import { SessionManager } from './models/auth/session-manager'
-import { SessionDataStorage } from './models/auth/session-data-storage'
 import { AuthMiddleware } from './middleware/auth-middleware'
+import { JwtUtil } from './models/auth/jwt-util'
 import { EcsService } from './models/ecs/ecs-service'
 import { RdsService } from './models/rds/rds-service'
 import { Scheduler } from './models/scheduler/scheduler'
@@ -35,10 +34,9 @@ fastify.register(cookie)
 
 // 認証サービスの初期化
 const userStorage = new UserStorage('./data')
-const sessionDataStorage = new SessionDataStorage()
-const sessionManager = new SessionManager(sessionDataStorage)
-const authMiddleware = new AuthMiddleware(sessionManager)
-const authController = new AuthController(userStorage, sessionManager, authMiddleware)
+const jwtUtil = new JwtUtil()
+const authMiddleware = new AuthMiddleware(jwtUtil)
+const authController = new AuthController(userStorage, authMiddleware, jwtUtil)
 
 // パブリックエンドポイント
 fastify.get('/health', getHealth)
@@ -189,8 +187,6 @@ try {
   await scheduler.startScheduler()
   console.log('ECS and RDS scheduler initialized successfully')
 
-  // 期限切れセッションの定期クリーンアップ
-  setInterval(async () => { await sessionManager.clean() }, 5 * 60 * 1000) // 5分毎
 
   await fastify.listen({ port: 3000, host: '0.0.0.0' })
   console.log('Server listening on port 3000')

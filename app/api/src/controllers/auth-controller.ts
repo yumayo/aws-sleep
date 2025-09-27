@@ -1,13 +1,13 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { UserStorage } from '../models/auth/user-storage.js'
-import { SessionManager } from '../models/auth/session-manager.js'
 import { AuthMiddleware } from '../middleware/auth-middleware.js'
+import { JwtUtil, TokenPayload } from '../models/auth/jwt-util.js'
 
 export class AuthController {
   constructor(
     private userStorage: UserStorage,
-    private sessionManager: SessionManager,
-    private authMiddleware: AuthMiddleware
+    private authMiddleware: AuthMiddleware,
+    private jwtUtil: JwtUtil
   ) {}
 
   login = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -15,7 +15,7 @@ export class AuthController {
       console.log('ログイン試行開始:', { ip: request.ip, userAgent: request.headers['user-agent'] })
 
       const { username, password } = request.body as { username: string, password: string }
-      console.log('ログインリクエスト:', { username, passwordLength: password?.length || 0 })
+      console.log('ログインリクエスト:', { username })
 
       if (!username || !password) {
         console.log('ログインエラー: ユーザー名またはパスワードが空')
@@ -33,9 +33,18 @@ export class AuthController {
         return reply.send({ error: 'ユーザー名またはパスワードが正しくありません' })
       }
 
-      console.log('セッション作成開始:', { username })
-      const sessionId = await this.sessionManager.create(username)
-      console.log('セッション作成完了:', { username, sessionId: sessionId.substring(0, 8) + '...' })
+      const tokenExpiration = Math.floor(Date.now() / 1000) + (30 * 60) // 30分（秒単位）
+      const tokenPayload: TokenPayload = {
+        username,
+        exp: tokenExpiration
+      }
+
+      const token = this.jwtUtil.generateToken(tokenPayload)
+      console.log('JWT生成完了:', {
+        username,
+        tokenPrefix: token.substring(0, 10) + '...',
+        expiresAt: new Date(tokenExpiration * 1000).toISOString()
+      })
 
       const cookieOptions = {
         httpOnly: true,
@@ -45,9 +54,9 @@ export class AuthController {
         path: '/'
       }
 
-      reply.setCookie('sessionId', sessionId, cookieOptions)
-      console.log('クッキー設定:', {
-        sessionId: sessionId.substring(0, 8) + '...',
+      reply.setCookie('auth_token', token, cookieOptions)
+      console.log('Cookie設定:', {
+        tokenPrefix: token.substring(0, 10) + '...',
         options: cookieOptions,
         nodeEnv: process.env.NODE_ENV
       })
@@ -66,14 +75,9 @@ export class AuthController {
     }
   }
 
-  logout = async (request: FastifyRequest, reply: FastifyReply) => {
+  logout = async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const sessionId = request.cookies.sessionId
-      if (sessionId) {
-        await this.sessionManager.destroy(sessionId)
-      }
-
-      reply.clearCookie('sessionId')
+      reply.clearCookie('auth_token')
       return reply.send({ success: true })
     } catch (error) {
       reply.code(500)

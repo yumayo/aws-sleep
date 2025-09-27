@@ -5,13 +5,11 @@ export interface User {
   createdAt: string
 }
 
-export interface Session {
-  sessionId: string
-  username: string
-  createdAt: string
-  expiresAt: string
-}
-
 export interface AuthUser {
   username: string
+}
+
+export interface TokenData {
+  token: string
+  expiresAt: string
 }
