@@ -53,7 +53,7 @@ make setup
 
 ## 動作確認
 
-http://localhost:5173 にアクセス  
+http://localhost/server-monitoring にアクセス  
 初回セットアップ通りなら、初期パスワード admin と password123 でログインできます。
 
 # **以下はメモ**
