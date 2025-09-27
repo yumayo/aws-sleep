@@ -434,6 +434,14 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                   <th>希望台数</th>
                   <th>実行中</th>
                   <th>開始中</th>
+                  <th>日</th>
+                  <th>月</th>
+                  <th>火</th>
+                  <th>水</th>
+                  <th>木</th>
+                  <th>金</th>
+                  <th>土</th>
+                  <th>祝</th>
                   <th>開始時刻</th>
                   <th>停止時刻</th>
                   <th>状態</th>
@@ -450,8 +458,16 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                       <td>{service.desiredCount}</td>
                       <td>{service.runningCount}</td>
                       <td>{service.pendingCount}</td>
-                      <td>{service.startDate || '-'}</td>
-                      <td>{service.stopDate || '-'}</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>❌️</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>❌️</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>❌️</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{service.startDate || '-'}</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{service.stopDate || '-'}</td>
                       <td>{service.status}</td>
                       <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{service.scheduleState}</strong></td>
                       <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#999' }}>{manualModeStatus?.isActive ? (manualModeStatus?.manualScheduleState || '-') : '-'}</strong></td>
@@ -475,6 +491,14 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                 <tr>
                   <th>クラスター名</th>
                   <th>インスタンス名</th>
+                  <th>日</th>
+                  <th>月</th>
+                  <th>火</th>
+                  <th>水</th>
+                  <th>木</th>
+                  <th>金</th>
+                  <th>土</th>
+                  <th>祝</th>
                   <th>開始時刻</th>
                   <th>停止時刻</th>
                   <th>状態</th>
@@ -484,31 +508,27 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
               </thead>
               <tbody>
                 {rdsClusters.flatMap((cluster, index) => {
-                  if (cluster.instances.length === 0) {
+                  return cluster.instances.map((instance, instanceIndex) => {
                     return (
-                      <tr key={index}>
+                      <tr key={`${index}-${instanceIndex}`}>
                         <td>{cluster.clusterName}</td>
-                        <td>-</td>
-                        <td>{cluster.startDate || '-'}</td>
-                        <td>{cluster.stopDate || '-'}</td>
-                        <td>{cluster.clusterStatus}</td>
+                        <td>{instance.instanceName}</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>❌️</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>❌️</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>❌️</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{cluster.startDate || '-'}</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{cluster.stopDate || '-'}</td>
+                        <td>{instance.status}</td>
                         <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{cluster.scheduleState}</strong></td>
                         <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#999' }}>{manualModeStatus?.isActive ? (manualModeStatus?.manualScheduleState || '-') : '-'}</strong></td>
                       </tr>
                     )
-                  }
-
-                  return cluster.instances.map((instance, instanceIndex) => (
-                    <tr key={`${index}-${instanceIndex}`}>
-                      <td>{cluster.clusterName}</td>
-                      <td>{instance.instanceName}</td>
-                      <td>{cluster.startDate || '-'}</td>
-                      <td>{cluster.stopDate || '-'}</td>
-                      <td>{instance.status}</td>
-                      <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{cluster.scheduleState}</strong></td>
-                      <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#999' }}>{manualModeStatus?.isActive ? (manualModeStatus?.manualScheduleState || '-') : '-'}</strong></td>
-                    </tr>
-                  ))
+                  })
                 })}
               </tbody>
             </table>
