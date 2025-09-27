@@ -314,11 +314,11 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       </div>
 
       {apiError && (
-        <div style={{ backgroundColor: '#ffebee', padding: '1rem', marginBottom: '1rem', borderRadius: '4px', border: '1px solid #f44336' }}>
+        <div style={{ backgroundColor: '#ffebee', padding: '1rem', marginBottom: '1rem', borderRadius: '4px', border: '2px solid #f44336' }}>
           <h3 style={{ margin: '0 0 0.5rem 0', color: '#d32f2f' }}>API接続エラー</h3>
           <div style={{ margin: '0 0 0.5rem 0' }}>
             <strong>エラー内容:</strong>
-            <pre style={{ margin: '0.5rem 0', padding: '0.5rem', backgroundColor: '#f5f5f5', borderRadius: '3px', fontSize: '0.9em', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            <pre style={{ margin: '0.5rem 0', padding: '0.5rem', backgroundColor: '#f5f5f5', borderRadius: '4px', fontSize: '0.9em', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {apiError}
             </pre>
           </div>
@@ -329,16 +329,17 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       )}
 
       <section>
-        <div style={{ backgroundColor: '#ccffff', padding: '10px', margin: '10px 0', border: '1px solid #00cccc' }}>
+        <div style={{ backgroundColor: '#ccffff', padding: '10px', margin: '10px 0', border: '2px solid #00cccc', borderRadius: '4px' }}>
           <p>
             平日は指定された時刻に自動的に起動し、夜間に停止されます。<br />
             土日・祝は終日サーバーを自動的に停止します。<br />
+            ECSは起動に3分程度、RDSは起動に15分程度掛かります。<br />
           </p>
         </div>
       </section>
 
       <section>
-        <div style={{ backgroundColor: '#ffffcc', padding: '10px', margin: '10px 0', border: '1px solid #cccc00' }}>
+        <div style={{ backgroundColor: '#ffffcc', padding: '10px', margin: '10px 0', border: '2px solid #cccc00', borderRadius: '4px' }}>
           <h2>マニュアルモード</h2>
           <p>
             マニュアルモード中はサーバーの自動起動と自動停止を行わなくなります。<br />
@@ -369,7 +370,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
             </button>
           </div>
           {showManualModeForm && (
-            <div style={{ backgroundColor: '#f0f8ff', padding: '15px', margin: '10px 0', border: '2px solid #4169e1', borderRadius: '5px' }}>
+            <div style={{ backgroundColor: '#f0f8ff', padding: '15px', margin: '10px 0', border: '2px solid #4169e1', borderRadius: '4px' }}>
               <h3>起動申請</h3>
               <form onSubmit={submitManualModeStartRequest}>
                 <div style={{ marginBottom: '15px' }}>
@@ -421,7 +422,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       </section>
 
       <section>
-        <div style={{ backgroundColor: '#f0f8ff', padding: '15px', margin: '10px 0', border: '2px solid #4169e1', borderRadius: '5px' }}>
+        <div style={{ backgroundColor: '#f0f8ff', padding: '15px', margin: '10px 0', border: '2px solid #4169e1', borderRadius: '4px' }}>
           <h2>ECS サービス状態</h2>
           {ecsServices.length === 0 ? (
             <p style={{ color: '#666', fontStyle: 'italic' }}>ECSサービス情報を取得中...</p>
@@ -458,19 +459,19 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                       <td>{service.desiredCount}</td>
                       <td>{service.runningCount}</td>
                       <td>{service.pendingCount}</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>❌️</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>❌️</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>❌️</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{service.startDate || '-'}</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{service.stopDate || '-'}</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{service.startDate || '-'}</td>
+                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{service.stopDate || '-'}</td>
                       <td>{service.status}</td>
-                      <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{service.scheduleState}</strong></td>
-                      <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#999' }}>{manualModeStatus?.isActive ? (manualModeStatus?.manualScheduleState || '-') : '-'}</strong></td>
+                      <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{service.scheduleState}</strong></td>
+                      <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#000' }}>{manualModeStatus?.isActive ? (manualModeStatus?.manualScheduleState || '-') : '-'}</strong></td>
                     </tr>
                   )
                 })}
@@ -481,7 +482,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       </section>
 
       <section>
-        <div style={{ backgroundColor: '#f0fff0', padding: '15px', margin: '10px 0', border: '2px solid #32cd32', borderRadius: '5px' }}>
+        <div style={{ backgroundColor: '#f0fff0', padding: '15px', margin: '10px 0', border: '2px solid #32cd32', borderRadius: '4px' }}>
           <h2>RDS クラスター状態</h2>
           {rdsClusters.length === 0 ? (
             <p style={{ color: '#666', fontStyle: 'italic' }}>RDSクラスター情報を取得中...</p>
@@ -513,19 +514,19 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                       <tr key={`${index}-${instanceIndex}`}>
                         <td>{cluster.clusterName}</td>
                         <td>{instance.instanceName}</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>❌️</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>✅</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>❌️</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>❌️</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{cluster.startDate || '-'}</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{cluster.stopDate || '-'}</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.startDate || '-'}</td>
+                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.stopDate || '-'}</td>
                         <td>{instance.status}</td>
-                        <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#999' } : {}}>{cluster.scheduleState}</strong></td>
-                        <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#999' }}>{manualModeStatus?.isActive ? (manualModeStatus?.manualScheduleState || '-') : '-'}</strong></td>
+                        <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.scheduleState}</strong></td>
+                        <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#000' }}>{manualModeStatus?.isActive ? (manualModeStatus?.manualScheduleState || '-') : '-'}</strong></td>
                       </tr>
                     )
                   })
