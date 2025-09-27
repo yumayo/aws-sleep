@@ -435,6 +435,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                   <th>希望台数</th>
                   <th>実行中</th>
                   <th>開始中</th>
+                  <th>状態</th>
                   <th>日</th>
                   <th>月</th>
                   <th>火</th>
@@ -445,7 +446,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                   <th>祝</th>
                   <th>開始時刻</th>
                   <th>停止時刻</th>
-                  <th>状態</th>
                   <th>スケジュール状態</th>
                   <th>マニュアルモード状態</th>
                 </tr>
@@ -459,6 +459,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                       <td>{service.desiredCount}</td>
                       <td>{service.runningCount}</td>
                       <td>{service.pendingCount}</td>
+                      <td>{service.status}</td>
                       <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
                       <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
                       <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
@@ -469,7 +470,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                       <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
                       <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{service.startDate || '-'}</td>
                       <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{service.stopDate || '-'}</td>
-                      <td>{service.status}</td>
                       <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{service.scheduleState}</strong></td>
                       <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#000' }}>{manualModeStatus?.isActive ? (manualModeStatus?.manualScheduleState || '-') : '-'}</strong></td>
                     </tr>
@@ -492,6 +492,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                 <tr>
                   <th>クラスター名</th>
                   <th>インスタンス名</th>
+                  <th>状態</th>
                   <th>日</th>
                   <th>月</th>
                   <th>火</th>
@@ -502,7 +503,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                   <th>祝</th>
                   <th>開始時刻</th>
                   <th>停止時刻</th>
-                  <th>状態</th>
                   <th>スケジュール状態</th>
                   <th>マニュアルモード状態</th>
                 </tr>
@@ -514,6 +514,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                       <tr key={`${index}-${instanceIndex}`}>
                         <td>{cluster.clusterName}</td>
                         <td>{instance.instanceName}</td>
+                        <td>{instance.status}</td>
                         <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
                         <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
                         <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
@@ -524,7 +525,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                         <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
                         <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.startDate || '-'}</td>
                         <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.stopDate || '-'}</td>
-                        <td>{instance.status}</td>
                         <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.scheduleState}</strong></td>
                         <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#000' }}>{manualModeStatus?.isActive ? (manualModeStatus?.manualScheduleState || '-') : '-'}</strong></td>
                       </tr>
