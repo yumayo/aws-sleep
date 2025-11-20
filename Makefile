@@ -1,12 +1,7 @@
-.DEFAULT_GOAL := initialize
-
-.PHONY: initialize setup install create-default-admin-user start-containers stop-containers
+.PHONY: environment setup install-all-npm create-default-admin-user start-containers stop-containers
 
 # 初期化（ディレクトリ作成、設定ファイル生成）
-initialize:
-	mkdir -p .claude.local
-	[ ! -f .claude.local/.claude.json ] && echo '{}' > .claude.local/.claude.json || true
-	mkdir -p .claude.local/.claude
+environment:
 	mkdir -p app/api/data
 	[ ! -f app/api/data/config.json ] && echo '{"ecsItems":[],"rdsItems":[],"awsRegion":"ap-northeast-1"}' > app/api/data/config.json || true
 	[ ! -f env/api/.env ] && cp env/api/.env.example env/api/.env || true
@@ -21,7 +16,7 @@ stop-containers:
 	docker compose down
 
 # 依存関係のインストール（script, lib, api, webの順）
-install: start-containers
+install-all-npm: start-containers
 	@echo "scriptコンテナでscriptのnpm install中..."
 	docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/script && npm install'
 	@echo "scriptコンテナでlibのnpm install中..."
@@ -34,12 +29,12 @@ install: start-containers
 	docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/web && npm install'
 
 # 管理者ユーザー作成
-create-default-admin-user: install
+create-default-admin-user: install-all-npm
 	@echo "管理者ユーザー（admin/password123）を作成中..."
 	docker compose exec script cli manage-users add admin password123
 
 # 完全セットアップ（初回セットアップ手順を自動化）
-setup: initialize install create-default-admin-user
+setup: environment install-all-npm create-default-admin-user
 	@echo "セットアップが完了しました！"
 	@echo "http://localhost:5173 にアクセスして、admin/password123でログインできます"
 	@echo ""
