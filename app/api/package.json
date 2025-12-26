@@ -21,11 +21,9 @@
     "@aws-sdk/client-rds": "^3.879.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^10.0.0",
-    "@types/node-cron": "^3.0.11",
     "dotenv": "^17.2.1",
     "fastify": "^5.0.0",
-    "japanese-holidays": "^1.0.10",
-    "node-cron": "^4.2.1"
+    "japanese-holidays": "^1.0.10"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
