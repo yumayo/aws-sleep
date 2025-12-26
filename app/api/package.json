@@ -8,8 +8,7 @@
     "build": "tsc",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run",
-    "manage-users": "tsx ../script/src/manage-users.ts"
+    "test:run": "vitest run"
   },
   "keywords": [],
   "author": "",
