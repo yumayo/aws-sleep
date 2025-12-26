@@ -21,7 +21,6 @@
     "@aws-sdk/client-rds": "^3.879.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^10.0.0",
-    "dotenv": "^17.2.1",
     "fastify": "^5.0.0",
     "japanese-holidays": "^1.0.10"
   },
