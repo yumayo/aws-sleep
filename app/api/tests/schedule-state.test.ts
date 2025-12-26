@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { Schedule } from '../src/types/scheduler-types'
-import { calculateScheduleState } from '../src/models/schedule-state-calculator'
+import { calculateScheduleState } from '../src/models/scheduler/schedule-state-calculator'
 
 describe('スケジュール', () => {
   it('スケジュールはbeginDateを含みendDateを含まない', () => {

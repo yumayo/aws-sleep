@@ -1,4 +1,4 @@
-import JapanaseHolidays from 'japanese-holidays'
+import { isHoliday } from '../../data/japanese-holidays'
 import { ScheduleState, Schedule } from '../../types/scheduler-types'
 
 export function calculateScheduleState(
@@ -23,7 +23,7 @@ export function isWorkingDay(date: Date): boolean {
   }
 
   // 祝日は休日
-  if (JapanaseHolidays.isHoliday(date)) {
+  if (isHoliday(date)) {
     return false
   }
 
