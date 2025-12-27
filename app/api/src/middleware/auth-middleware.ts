@@ -33,9 +33,9 @@ export class AuthMiddleware {
         tokenPrefix: token.substring(0, 10) + '...'
       })
     } else if (request.headers.authorization?.startsWith('Bearer ')) {
-      token = request.headers.authorization.slice(7) // "Bearer "を除去
+      token = request.headers.authorization?.slice(7) // "Bearer "を除去
       console.log('Authorizationヘッダーからトークン取得:', {
-        tokenPrefix: token.substring(0, 10) + '...'
+        tokenPrefix: token?.substring(0, 10) + '...'
       })
     }
 
