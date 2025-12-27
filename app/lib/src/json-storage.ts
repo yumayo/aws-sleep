@@ -1,18 +1,18 @@
 import { promises as fs } from 'fs'
 import path from 'path'
-import AsyncLock from 'async-lock'
+import { FileLock } from './file-lock'
 
 export class JsonStorage<T> {
   private readonly filePath: string
-  private readonly lock: AsyncLock
+  private readonly fileLock: FileLock
 
   constructor(fileName: string, dataDir: string = './data') {
     this.filePath = path.join(dataDir, fileName)
-    this.lock = new AsyncLock()
+    this.fileLock = new FileLock()
   }
 
   async save(data: T): Promise<void> {
-    await this.lock.acquire(this.filePath, async () => {
+    await this.fileLock.acquire(this.filePath, async () => {
       try {
         const dir = path.dirname(this.filePath)
         await fs.mkdir(dir, { recursive: true })
@@ -24,7 +24,7 @@ export class JsonStorage<T> {
   }
 
   async load(): Promise<T | null> {
-    return await this.lock.acquire(this.filePath, async () => {
+    return await this.fileLock.acquire(this.filePath, async () => {
       try {
         const data = await fs.readFile(this.filePath, 'utf-8')
         return JSON.parse(data)
@@ -47,7 +47,7 @@ export class JsonStorage<T> {
   }
 
   async delete(): Promise<void> {
-    await this.lock.acquire(this.filePath, async () => {
+    await this.fileLock.acquire(this.filePath, async () => {
       try {
         await fs.unlink(this.filePath)
       } catch (error) {
