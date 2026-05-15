@@ -105,12 +105,6 @@ docker compose exec script bash -c 'curl http://api:3000/health && echo ""'
 docker compose exec script bash -c 'cd app/api && npm test'
 ```
 
-## RDSのパスワード生成コマンド
-
-```sh
-docker compose exec script cli generate-rds-password
-```
-
 ## CloudFormation デプロイ
 
 ### 基本的な使用方法

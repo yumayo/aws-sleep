@@ -78,8 +78,7 @@ function getParametersForTemplate(templateFile: string, awsConig: AwsConfig): Pa
       }
     ];
   } else if (fileName === 'rds-aurora-sample.yml') {
-    // RDS AuroraクラスターにはVPCとSubnetパラメータ、およびMasterPasswordが必要
-    const masterPassword = process.env.APP_RDS_ROOT_PASSWORD;
+    // RDS AuroraクラスターにはVPCとSubnetパラメータが必要
     // const snapshotIdentifier = process.env.APP_RDS_SNAPSHOT_IDENTIFIER;
     return [
       {
@@ -89,10 +88,6 @@ function getParametersForTemplate(templateFile: string, awsConig: AwsConfig): Pa
       {
         ParameterKey: 'SubnetIds',
         ParameterValue: awsConig.vpc.subnets.map(subnet => subnet.subnetId).join(',')
-      },
-      {
-        ParameterKey: 'MasterPassword',
-        ParameterValue: masterPassword
       },
       // {
       //   ParameterKey: 'SnapshotIdentifier',

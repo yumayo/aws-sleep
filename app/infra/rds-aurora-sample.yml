@@ -15,16 +15,22 @@ Parameters:
     Type: String
     Default: root
 
-  MasterPassword:
-    Type: String
-    NoEcho: true
-    MinLength: 8
-
   # SnapshotIdentifier:
   #   Type: String
   #   Default: ""
 
 Resources:
+  # Secret for Aurora master user
+  AuroraMasterUserSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: !Sub 'Master user credentials for ${AWS::StackName} Aurora cluster'
+      GenerateSecretString:
+        SecretStringTemplate: !Sub '{"username":"${MasterUsername}"}'
+        GenerateStringKey: password
+        PasswordLength: 20
+        ExcludeCharacters: '"@/\'
+
   # DB Subnet Group
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
@@ -53,7 +59,7 @@ Resources:
       Engine: aurora-mysql
       DatabaseName: !Ref DatabaseName
       MasterUsername: !Ref MasterUsername
-      MasterUserPassword: !Ref MasterPassword
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${AuroraMasterUserSecret}:SecretString:password}}'
       VpcSecurityGroupIds:
         - !Ref AuroraSecurityGroup
       DBSubnetGroupName: !Ref DBSubnetGroup
@@ -99,3 +105,8 @@ Outputs:
     Value: !Ref DatabaseName
     Export:
       Name: AuroraDatabaseName
+
+  MasterUserSecretArn:
+    Value: !Ref AuroraMasterUserSecret
+    Export:
+      Name: AuroraMasterUserSecretArn

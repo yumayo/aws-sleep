@@ -1,6 +1,5 @@
 import { deployCloudFormation } from './commands/deploy-cloudformation';
 import { pushEcr } from './commands/push-ecr';
-import { generateRdsPasswordCommand } from './commands/generate-rds-password';
 import { generateHashCommand } from './commands/generate-hash';
 import { generateHexCommand } from './commands/generate-hex';
 import { manageUsers } from './commands/manage-users';
@@ -14,9 +13,6 @@ switch (command) {
     break;
   case 'push-ecr':
     await pushEcr(args.slice(1));
-    break;
-  case 'generate-rds-password':
-    await generateRdsPasswordCommand(args.slice(1));
     break;
   case 'generate-hash':
     await generateHashCommand(args.slice(1));
@@ -32,7 +28,6 @@ switch (command) {
     console.error('Available commands:');
     console.error('  deploy-cloudformation <template-file>');
     console.error('  push-ecr');
-    console.error('  generate-rds-password');
     console.error('  generate-hash [length]');
     console.error('  generate-hex [length]');
     console.error('  manage-users <add|remove|list> [options]');
