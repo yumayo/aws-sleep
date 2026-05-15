@@ -3,6 +3,7 @@
 # 初期化（ディレクトリ作成、設定ファイル生成）
 environment:
 	mkdir -p app/api/data
+	mkdir -p app/script/data
 	[ ! -f app/api/data/config.json ] && echo '{"ecsItems":[],"rdsItems":[],"awsRegion":"ap-northeast-1"}' > app/api/data/config.json || true
 	[ ! -f env/api/.env ] && cp env/api/.env.example env/api/.env || true
 	[ ! -f env/script/.env ] && cp env/script/.env.example env/script/.env || true

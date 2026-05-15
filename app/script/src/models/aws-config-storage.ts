@@ -5,14 +5,14 @@ export class AwsConfigStorage {
   private readonly storage: JsonStorage<AwsConfig>
 
   constructor() {
-    this.storage = new JsonStorage<AwsConfig>('aws-config.json', '../api/data')
+    this.storage = new JsonStorage<AwsConfig>('aws-config.json', './data')
   }
 
   async load(): Promise<AwsConfig> {
     const config = await this.storage.load()
     
     if (!config) {
-      throw new Error('Script config file not found. Please create ../api/data/aws-config.json')
+      throw new Error('Script config file not found. Please create data/aws-config.json')
     }
     
     // 設定値の検証
