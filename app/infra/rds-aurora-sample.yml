@@ -71,7 +71,7 @@ Resources:
     Properties:
       DBInstanceIdentifier: aurora-sample-instance-1
       DBClusterIdentifier: !Ref AuroraCluster
-      DBInstanceClass: db.t3.medium
+      DBInstanceClass: db.t4g.medium
       Engine: aurora-mysql
       PubliclyAccessible: false
 
@@ -81,7 +81,7 @@ Resources:
     Properties:
       DBInstanceIdentifier: aurora-sample-instance-2
       DBClusterIdentifier: !Ref AuroraCluster
-      DBInstanceClass: db.t3.medium
+      DBInstanceClass: db.t4g.medium
       Engine: aurora-mysql
       PubliclyAccessible: false
 
