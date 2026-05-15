@@ -22,15 +22,15 @@ nvm alias default node'
 
 RUN mkdir -p /workspace && chown -R ubuntu:ubuntu /workspace
 
-# Copy package files and install dependencies
-COPY ./app/web/package*.json /workspace/app/web/
+# packageファイルとnpmのセキュリティ設定をコピーして依存関係をインストールする
+COPY ./app/web/package*.json ./app/web/.npmrc /workspace/app/web/
 
 RUN chown -R ubuntu:ubuntu /workspace/app/web
 
 RUN bash -c '\
 [ -s "/home/ubuntu/.nvm/nvm.sh" ] && \
 source "/home/ubuntu/.nvm/nvm.sh" && \
-(cd /workspace/app/web && npm install) \
+(cd /workspace/app/web && npm ci) \
 '
 
 # # Copy the rest of the application code

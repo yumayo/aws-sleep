@@ -26,22 +26,22 @@ RUN mkdir -p /workspace && chown -R ubuntu:ubuntu /workspace
 COPY ./app/lib /workspace/app/lib
 RUN chown -R ubuntu:ubuntu /workspace/app/lib
 
-# Build shared lib
+# ロックファイルに基づいて共有ライブラリをインストールしてビルドする
 RUN bash -c '\
 [ -s "/home/ubuntu/.nvm/nvm.sh" ] && \
 source "/home/ubuntu/.nvm/nvm.sh" && \
-(cd /workspace/app/lib && npm install && npm run build) \
+(cd /workspace/app/lib && npm ci && npm run build) \
 '
 
-# Copy package files and install dependencies
-COPY ./app/api/package*.json /workspace/app/api/
+# packageファイルとnpmのセキュリティ設定をコピーして依存関係をインストールする
+COPY ./app/api/package*.json ./app/api/.npmrc /workspace/app/api/
 
 RUN chown -R ubuntu:ubuntu /workspace/app/api
 
 RUN bash -c '\
 [ -s "/home/ubuntu/.nvm/nvm.sh" ] && \
 source "/home/ubuntu/.nvm/nvm.sh" && \
-(cd /workspace/app/api && npm install) \
+(cd /workspace/app/api && npm ci) \
 '
 
 # # Copy the rest of the application code

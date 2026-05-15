@@ -15,18 +15,18 @@ start-containers:
 stop-containers:
 	docker compose down
 
-# 依存関係のインストール（script, lib, api, webの順）
+# 依存関係の安全なインストール（script, lib, api, webの順）
 install-all-npm: start-containers
-	@echo "scriptコンテナでscriptのnpm install中..."
-	docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/script && npm install'
-	@echo "scriptコンテナでlibのnpm install中..."
-	docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/lib && npm install'
+	@echo "scriptコンテナでscriptのnpm ci中..."
+	docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/script && npm ci'
+	@echo "scriptコンテナでlibのnpm ci中..."
+	docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/lib && npm ci'
 	@echo "scriptコンテナでlibをビルド中..."
 	docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/lib && npm run build'
-	@echo "scriptコンテナでapiのnpm install中..."
-	docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/api && npm install'
-	@echo "scriptコンテナでwebのnpm install中..."
-	docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/web && npm install'
+	@echo "scriptコンテナでapiのnpm ci中..."
+	docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/api && npm ci'
+	@echo "scriptコンテナでwebのnpm ci中..."
+	docker compose exec script bash -c '. ~/.nvm/nvm.sh && cd /workspace/app/web && npm ci'
 
 # 管理者ユーザー作成
 create-default-admin-user: install-all-npm
