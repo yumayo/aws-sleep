@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { fetchWithCsrf } from '../api-client'
+import { TimePickerInput } from './time-picker-input'
 
 interface ScheduleConfigEcsItem {
   accountId: string
@@ -205,26 +206,13 @@ function MaskedCredentialInput({ value, placeholder, onValueChange }: MaskedCred
       onChange={handleChange}
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}
-      style={{ width: '100%' }}
     />
   )
 }
 
 function ReadOnlyValue({ value }: { value: string }) {
   return (
-    <span
-      style={{
-        display: 'inline-block',
-        minWidth: '10rem',
-        padding: '2px 6px',
-        backgroundColor: '#f2f2f2',
-        border: '1px solid #ccc',
-        borderRadius: '3px',
-        color: '#555',
-        fontFamily: 'monospace',
-        whiteSpace: 'nowrap'
-      }}
-    >
+    <span className="read-only-value">
       {value || '-'}
     </span>
   )
@@ -478,63 +466,65 @@ export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
   }, [])
 
   return (
-    <section>
-      <div style={{ backgroundColor: '#f7f7f7', padding: '15px', margin: '10px 0', border: '2px solid #999', borderRadius: '4px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-          <h2>config.json 設定</h2>
+    <section className="panel config-editor">
+      <div className="panel-inner">
+        <div className="panel-header">
           <div>
-            <button onClick={() => setIsOpen(prev => !prev)} disabled={loading} style={{ marginRight: '8px' }}>
+            <h2 className="panel-title">Adminエリア</h2>
+            <p className="panel-caption">AWSアカウントとスケジュール対象リソースを管理します。</p>
+          </div>
+          <div className="config-actions">
+            <button onClick={() => setIsOpen(prev => !prev)} disabled={loading}>
               {isOpen ? '閉じる' : '開く'}
             </button>
-            <button onClick={fetchConfig} disabled={loading} style={{ marginRight: '8px' }}>
+            <button onClick={fetchConfig} disabled={loading}>
               再読み込み
             </button>
-            <button onClick={saveConfig} disabled={loading}>
+            <button onClick={saveConfig} disabled={loading} className="button-primary">
               保存
             </button>
           </div>
         </div>
 
-        {message && <p style={{ color: '#2e7d32' }}>{message}</p>}
+        {message && <p className="notice notice-success">{message}</p>}
         {error && (
-          <pre style={{ backgroundColor: '#ffebee', padding: '0.5rem', border: '1px solid #f44336', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          <pre className="notice notice-danger error-pre">
             {error}
           </pre>
         )}
 
         {isOpen && (
-          <div>
-            <h3>AWSアカウント</h3>
+          <div className="config-content">
+            <h3 className="config-section-title">AWSアカウント</h3>
             {config.awsAccounts.map((account, index) => (
-              <fieldset key={index} style={{ marginBottom: '12px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '8px' }}>
-                  <label>
+              <fieldset key={index} className="account-fieldset">
+                <div className="account-grid">
+                  <label className="field-label">
                     AWSアカウントID
-                    <input value={account.accountId} onChange={(e) => updateAccount(index, { accountId: e.target.value })} style={{ width: '100%' }} />
+                    <input value={account.accountId} onChange={(e) => updateAccount(index, { accountId: e.target.value })} />
                   </label>
-                  <label>
+                  <label className="field-label">
                     AWSアカウント名
-                    <input value={account.accountName ?? ''} onChange={(e) => updateAccount(index, { accountName: e.target.value })} style={{ width: '100%' }} />
+                    <input value={account.accountName ?? ''} onChange={(e) => updateAccount(index, { accountName: e.target.value })} />
                   </label>
-                  <label>
+                  <label className="field-label">
                     リージョン
-                    <input value={account.awsRegion} onChange={(e) => updateAccount(index, { awsRegion: e.target.value })} style={{ width: '100%' }} />
+                    <input value={account.awsRegion} onChange={(e) => updateAccount(index, { awsRegion: e.target.value })} />
                   </label>
-                  <label>
+                  <label className="field-label">
                     AWSプロファイル
-                    <input value={account.credentialProfile ?? ''} onChange={(e) => updateAccount(index, { credentialProfile: e.target.value })} style={{ width: '100%' }} />
+                    <input value={account.credentialProfile ?? ''} onChange={(e) => updateAccount(index, { credentialProfile: e.target.value })} />
                   </label>
-                  <label>
+                  <label className="field-label">
                     アクセスキーID
                     <input
                       {...credentialInputProps}
                       value={account.accessKeyId ?? ''}
                       placeholder={account.hasAccessKeyId ? '保存済み' : ''}
                       onChange={(e) => updateAccount(index, { accessKeyId: e.target.value })}
-                      style={{ width: '100%' }}
                     />
                   </label>
-                  <label>
+                  <label className="field-label">
                     シークレットアクセスキー
                     <MaskedCredentialInput
                       value={account.secretAccessKey ?? ''}
@@ -542,7 +532,7 @@ export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
                       onValueChange={(value) => updateAccount(index, { secretAccessKey: value })}
                     />
                   </label>
-                  <label>
+                  <label className="field-label">
                     セッショントークン
                     <MaskedCredentialInput
                       value={account.sessionToken ?? ''}
@@ -551,83 +541,113 @@ export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
                     />
                   </label>
                 </div>
-                <div style={{ marginTop: '8px' }}>
-                  <button onClick={() => discoverAccount(index)} disabled={loading} style={{ marginRight: '8px' }}>
+                <div className="button-row account-actions">
+                  <button onClick={() => discoverAccount(index)} disabled={loading}>
                     アカウント情報取得
                   </button>
-                  <button onClick={() => importEcsServices(index)} disabled={loading} style={{ marginRight: '8px' }}>
+                  <button onClick={() => importEcsServices(index)} disabled={loading}>
                     ECSサービス取り込み
                   </button>
-                  <button onClick={() => importRdsClusters(index)} disabled={loading} style={{ marginRight: '8px' }}>
+                  <button onClick={() => importRdsClusters(index)} disabled={loading}>
                     RDSクラスター取り込み
                   </button>
-                  <button onClick={() => removeAccount(index)} disabled={loading}>
+                  <button onClick={() => removeAccount(index)} disabled={loading} className="button-danger">
                     削除
                   </button>
                 </div>
               </fieldset>
             ))}
-            <button onClick={addAccount} disabled={loading}>AWSアカウントを追加</button>
+            <div className="button-row">
+              <button onClick={addAccount} disabled={loading}>AWSアカウントを追加</button>
+            </div>
 
-            <h3>ECSサービス</h3>
-            <table border={1}>
-              <thead>
-                <tr>
-                  <th>アカウント</th>
-                  <th>グループ</th>
-                  <th>クラスター</th>
-                  <th>サービス</th>
-                  <th>希望台数</th>
-                  <th>開始</th>
-                  <th>停止</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {config.ecsItems.map((item, index) => (
-                  <tr key={index}>
-                    <td>
-                      <ReadOnlyValue value={item.accountId} />
-                    </td>
-                    <td><input value={item.groupName} onChange={(e) => updateEcsItem(index, { groupName: e.target.value })} /></td>
-                    <td><ReadOnlyValue value={item.clusterName} /></td>
-                    <td><ReadOnlyValue value={item.serviceName} /></td>
-                    <td><input type="number" min={0} value={item.desiredCount} onChange={(e) => updateEcsItem(index, { desiredCount: Number(e.target.value) })} style={{ width: '5rem' }} /></td>
-                    <td><input value={item.startDate} onChange={(e) => updateEcsItem(index, { startDate: e.target.value })} /></td>
-                    <td><input value={item.stopDate} onChange={(e) => updateEcsItem(index, { stopDate: e.target.value })} /></td>
-                    <td><button onClick={() => removeEcsItem(index)} disabled={loading}>削除</button></td>
+            <h3 className="config-section-title">ECSサービス</h3>
+            <div className="table-wrap">
+              <table className="config-table">
+                <thead>
+                  <tr>
+                    <th>アカウント</th>
+                    <th>グループ</th>
+                    <th>クラスター</th>
+                    <th>サービス</th>
+                    <th>希望台数</th>
+                    <th>開始</th>
+                    <th>停止</th>
+                    <th>操作</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {config.ecsItems.map((item, index) => (
+                    <tr key={index}>
+                      <td>
+                        <ReadOnlyValue value={item.accountId} />
+                      </td>
+                      <td><input value={item.groupName} onChange={(e) => updateEcsItem(index, { groupName: e.target.value })} /></td>
+                      <td><ReadOnlyValue value={item.clusterName} /></td>
+                      <td><ReadOnlyValue value={item.serviceName} /></td>
+                      <td><input type="number" min={0} value={item.desiredCount} onChange={(e) => updateEcsItem(index, { desiredCount: Number(e.target.value) })} /></td>
+                      <td>
+                        <TimePickerInput
+                          ariaLabel={`ECS ${item.serviceName} の開始時刻`}
+                          value={item.startDate}
+                          onValueChange={(value) => updateEcsItem(index, { startDate: value })}
+                        />
+                      </td>
+                      <td>
+                        <TimePickerInput
+                          ariaLabel={`ECS ${item.serviceName} の停止時刻`}
+                          value={item.stopDate}
+                          onValueChange={(value) => updateEcsItem(index, { stopDate: value })}
+                        />
+                      </td>
+                      <td><button onClick={() => removeEcsItem(index)} disabled={loading} className="button-danger">削除</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-            <h3>RDSクラスター</h3>
-            <table border={1}>
-              <thead>
-                <tr>
-                  <th>アカウント</th>
-                  <th>グループ</th>
-                  <th>クラスター</th>
-                  <th>開始</th>
-                  <th>停止</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {config.rdsItems.map((item, index) => (
-                  <tr key={index}>
-                    <td>
-                      <ReadOnlyValue value={item.accountId} />
-                    </td>
-                    <td><input value={item.groupName} onChange={(e) => updateRdsItem(index, { groupName: e.target.value })} /></td>
-                    <td><ReadOnlyValue value={item.clusterName} /></td>
-                    <td><input value={item.startDate} onChange={(e) => updateRdsItem(index, { startDate: e.target.value })} /></td>
-                    <td><input value={item.stopDate} onChange={(e) => updateRdsItem(index, { stopDate: e.target.value })} /></td>
-                    <td><button onClick={() => removeRdsItem(index)} disabled={loading}>削除</button></td>
+            <h3 className="config-section-title">RDSクラスター</h3>
+            <div className="table-wrap">
+              <table className="config-table">
+                <thead>
+                  <tr>
+                    <th>アカウント</th>
+                    <th>グループ</th>
+                    <th>クラスター</th>
+                    <th>開始</th>
+                    <th>停止</th>
+                    <th>操作</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {config.rdsItems.map((item, index) => (
+                    <tr key={index}>
+                      <td>
+                        <ReadOnlyValue value={item.accountId} />
+                      </td>
+                      <td><input value={item.groupName} onChange={(e) => updateRdsItem(index, { groupName: e.target.value })} /></td>
+                      <td><ReadOnlyValue value={item.clusterName} /></td>
+                      <td>
+                        <TimePickerInput
+                          ariaLabel={`RDS ${item.clusterName} の開始時刻`}
+                          value={item.startDate}
+                          onValueChange={(value) => updateRdsItem(index, { startDate: value })}
+                        />
+                      </td>
+                      <td>
+                        <TimePickerInput
+                          ariaLabel={`RDS ${item.clusterName} の停止時刻`}
+                          value={item.stopDate}
+                          onValueChange={(value) => updateRdsItem(index, { stopDate: value })}
+                        />
+                      </td>
+                      <td><button onClick={() => removeRdsItem(index)} disabled={loading} className="button-danger">削除</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import type { CSSProperties } from 'react'
 import { ConfigEditor } from '../components/config-editor'
+import { TimePickerInput } from '../components/time-picker-input'
 import { fetchWithCsrf } from '../api-client'
 
 type ScheduleState = 'active' | 'stop'
@@ -87,6 +87,225 @@ interface DashboardPageProps {
   logout: () => void
 }
 
+interface ManualModeFormData {
+  scheduledDate: string
+  scheduledTime: string
+  isIndefinite: boolean
+  groupStates: Record<string, ScheduleState>
+}
+
+type ManualDateField = 'scheduledDate' | 'scheduledTime'
+
+const formatScheduleState = (state?: ScheduleState): string => {
+  if (!state) {
+    return '-'
+  }
+
+  return state === 'active' ? '起動' : '停止'
+}
+
+const getScheduleBadgeClassName = (state?: ScheduleState): string => {
+  if (state === 'active') {
+    return 'status-badge status-badge-active'
+  }
+
+  if (state === 'stop') {
+    return 'status-badge status-badge-stop'
+  }
+
+  return 'status-badge status-badge-neutral'
+}
+
+const padDatePart = (value: number): string => String(value).padStart(2, '0')
+
+const getManualDateInputValue = (date: Date): string => (
+  `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`
+)
+
+const getManualTimeInputValue = (date: Date): string => (
+  `${padDatePart(date.getHours())}:${padDatePart(date.getMinutes())}`
+)
+
+const getMonthStart = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), 1)
+
+const parseManualDateInputValue = (value: string): Date | null => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) {
+    return null
+  }
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const date = new Date(year, month - 1, day)
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null
+  }
+
+  return date
+}
+
+const isSameCalendarDate = (dateA: Date, dateB: Date): boolean => (
+  dateA.getFullYear() === dateB.getFullYear() &&
+  dateA.getMonth() === dateB.getMonth() &&
+  dateA.getDate() === dateB.getDate()
+)
+
+const isCalendarDateBefore = (dateA: Date, dateB: Date): boolean => (
+  new Date(dateA.getFullYear(), dateA.getMonth(), dateA.getDate()).getTime() <
+  new Date(dateB.getFullYear(), dateB.getMonth(), dateB.getDate()).getTime()
+)
+
+const isCalendarMonthBefore = (dateA: Date, dateB: Date): boolean => (
+  dateA.getFullYear() < dateB.getFullYear() ||
+  (dateA.getFullYear() === dateB.getFullYear() && dateA.getMonth() < dateB.getMonth())
+)
+
+const getManualDateParts = (date: Date): Pick<ManualModeFormData, ManualDateField> => ({
+  scheduledDate: getManualDateInputValue(date),
+  scheduledTime: getManualTimeInputValue(date)
+})
+
+const getEmptyManualModeFormData = (): ManualModeFormData => ({
+  scheduledDate: '',
+  scheduledTime: '',
+  isIndefinite: false,
+  groupStates: {}
+})
+
+const buildManualScheduledDate = (formData: ManualModeFormData): Date | null => {
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(formData.scheduledDate)
+  const timeMatch = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(formData.scheduledTime)
+
+  if (!dateMatch || !timeMatch) {
+    return null
+  }
+
+  const year = Number(dateMatch[1])
+  const month = Number(dateMatch[2])
+  const day = Number(dateMatch[3])
+  const hour = Number(timeMatch[1])
+  const minute = Number(timeMatch[2])
+  const scheduledDate = new Date(year, month - 1, day, hour, minute, 0, 0)
+
+  if (
+    scheduledDate.getFullYear() !== year ||
+    scheduledDate.getMonth() !== month - 1 ||
+    scheduledDate.getDate() !== day ||
+    scheduledDate.getHours() !== hour ||
+    scheduledDate.getMinutes() !== minute
+  ) {
+    return null
+  }
+
+  return scheduledDate
+}
+
+const weekdayLabels = ['日', '月', '火', '水', '木', '金', '土']
+
+interface ManualDateCalendarProps {
+  selectedDateValue: string
+  displayMonth: Date
+  minDate: Date
+  onDisplayMonthChange: (date: Date) => void
+  onDateSelect: (date: Date) => void
+}
+
+function ManualDateCalendar({
+  selectedDateValue,
+  displayMonth,
+  minDate,
+  onDisplayMonthChange,
+  onDateSelect
+}: ManualDateCalendarProps) {
+  const selectedDate = parseManualDateInputValue(selectedDateValue)
+  const today = new Date()
+  const monthStart = getMonthStart(displayMonth)
+  const minMonthStart = getMonthStart(minDate)
+  const gridStart = new Date(monthStart)
+  gridStart.setDate(gridStart.getDate() - gridStart.getDay())
+
+  const days = Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart)
+    date.setDate(gridStart.getDate() + index)
+    return date
+  })
+
+  const moveMonth = (offset: number) => {
+    const nextMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + offset, 1)
+    if (isCalendarMonthBefore(nextMonth, minMonthStart)) {
+      return
+    }
+
+    onDisplayMonthChange(nextMonth)
+  }
+
+  return (
+    <div className="manual-calendar">
+      <div className="manual-calendar-header">
+        <button
+          type="button"
+          className="manual-calendar-nav"
+          onClick={() => moveMonth(-1)}
+          disabled={!isCalendarMonthBefore(minMonthStart, monthStart)}
+          aria-label="前の月"
+        >
+          &lt;
+        </button>
+        <div className="manual-calendar-title" aria-live="polite">
+          {monthStart.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}
+        </div>
+        <button
+          type="button"
+          className="manual-calendar-nav"
+          onClick={() => moveMonth(1)}
+          aria-label="次の月"
+        >
+          &gt;
+        </button>
+      </div>
+      <div className="manual-calendar-grid">
+        {weekdayLabels.map(label => (
+          <div key={label} className="manual-calendar-weekday">
+            {label}
+          </div>
+        ))}
+        {days.map(date => {
+          const isCurrentMonth = date.getMonth() === monthStart.getMonth()
+          const isSelected = selectedDate ? isSameCalendarDate(date, selectedDate) : false
+          const isToday = isSameCalendarDate(date, today)
+          const isPast = isCalendarDateBefore(date, minDate)
+          const className = [
+            'manual-calendar-day',
+            isCurrentMonth ? '' : 'manual-calendar-day-outside',
+            isToday ? 'manual-calendar-day-today' : '',
+            isSelected ? 'manual-calendar-day-selected' : ''
+          ].filter(Boolean).join(' ')
+
+          return (
+            <button
+              key={getManualDateInputValue(date)}
+              type="button"
+              className={className}
+              onClick={() => onDateSelect(date)}
+              disabled={isPast}
+              aria-pressed={isSelected}
+              aria-label={`${date.toLocaleDateString('ja-JP')}を選択`}
+            >
+              {date.getDate()}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function DashboardPage({ user, logout }: DashboardPageProps) {
   const isAdmin = user.isAdmin
   const [ecsServices, setEcsServices] = useState<EcsService[]>([])
@@ -97,11 +316,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
   const [manualModeStatus, setManualModeStatus] = useState<ManualModeStatusResponse | null>(null)
   const [resourceGroups, setResourceGroups] = useState<ResourceGroup[]>([])
   const [showManualModeForm, setShowManualModeForm] = useState(false)
-  const [manualModeFormData, setManualModeFormData] = useState({
-    scheduledDate: '',
-    isIndefinite: false,
-    groupStates: {} as Record<string, ScheduleState>
-  })
+  const [manualModeFormData, setManualModeFormData] = useState<ManualModeFormData>(getEmptyManualModeFormData)
+  const [manualCalendarMonth, setManualCalendarMonth] = useState<Date>(() => getMonthStart(new Date()))
   const [lastScheduleExecution, setLastScheduleExecution] = useState<string | null>(null)
   const [nextScheduleExecution, setNextScheduleExecution] = useState<string | null>(null)
 
@@ -174,35 +390,24 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     const now = new Date()
     const defaultTime = new Date(now.getTime() + 60 * 60 * 1000)
 
-    const year = defaultTime.getFullYear()
-    const month = String(defaultTime.getMonth() + 1).padStart(2, '0')
-    const day = String(defaultTime.getDate()).padStart(2, '0')
-    const hours = String(defaultTime.getHours()).padStart(2, '0')
-    const minutes = String(defaultTime.getMinutes()).padStart(2, '0')
-    const defaultTimeString = `${year}-${month}-${day}T${hours}:${minutes}`
-
     setManualModeFormData({
-      scheduledDate: defaultTimeString,
+      ...getManualDateParts(defaultTime),
       isIndefinite: false,
       groupStates: Object.fromEntries(resourceGroups.map(group => [group.groupName, 'active' as ScheduleState]))
     })
+    setManualCalendarMonth(getMonthStart(defaultTime))
     setShowManualModeForm(true)
   }
 
   const submitManualModeStartRequest = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!manualModeFormData.isIndefinite && !manualModeFormData.scheduledDate) {
-      alert('サーバーの停止日時を入力してください')
-      return
-    }
-
     const now = new Date()
     let scheduledDate: Date | null = null
 
     if (!manualModeFormData.isIndefinite) {
-      scheduledDate = new Date(manualModeFormData.scheduledDate)
-      if (isNaN(scheduledDate.getTime()) || scheduledDate <= now) {
+      scheduledDate = buildManualScheduledDate(manualModeFormData)
+      if (!scheduledDate || scheduledDate <= now) {
         alert('有効な未来の日時を入力してください')
         return
       }
@@ -296,7 +501,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
 
   const cancelManualModeForm = () => {
     setShowManualModeForm(false)
-    setManualModeFormData({ scheduledDate: '', isIndefinite: false, groupStates: {} })
+    setManualModeFormData(getEmptyManualModeFormData())
+    setManualCalendarMonth(getMonthStart(new Date()))
   }
 
   const cancelManualMode = async () => {
@@ -326,8 +532,26 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     }
   }
 
-  const handleManualModeFormDataChange = (field: 'scheduledDate' | 'isIndefinite', value: string | boolean) => {
+  const handleManualModeFormDataChange = (field: ManualDateField | 'isIndefinite', value: string | boolean) => {
     setManualModeFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleManualDateSelect = (date: Date) => {
+    setManualModeFormData(prev => ({ ...prev, scheduledDate: getManualDateInputValue(date) }))
+    setManualCalendarMonth(getMonthStart(date))
+  }
+
+  const applyManualTimePreset = (hour: number, minute: number, shouldUseToday = false) => {
+    const now = new Date()
+    const baseDate = shouldUseToday ? now : buildManualScheduledDate(manualModeFormData) ?? now
+    const presetDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hour, minute, 0, 0)
+
+    if (!shouldUseToday && presetDate <= now) {
+      presetDate.setDate(presetDate.getDate() + 1)
+    }
+
+    setManualModeFormData(prev => ({ ...prev, ...getManualDateParts(presetDate) }))
+    setManualCalendarMonth(getMonthStart(presetDate))
   }
 
   const handleManualGroupStateChange = (groupName: string, shouldStart: boolean) => {
@@ -354,7 +578,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     }
 
     return Object.entries(groupStates)
-      .map(([groupName, state]) => `${groupName}: ${state}`)
+      .map(([groupName, state]) => `${groupName}: ${formatScheduleState(state)}`)
       .join(', ')
   }
 
@@ -406,24 +630,36 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     }, new Map<string, ResourceStatus[]>()).entries()
   ).map(([groupName, resources]) => ({ groupName, resources }))
 
-  const inactiveScheduleStyle: CSSProperties = manualModeStatus?.isActive
-    ? { textDecoration: 'line-through', color: '#000' }
-    : {}
+  const scheduleCellClassName = manualModeStatus?.isActive ? 'inactive-schedule' : undefined
+
+  const renderWeeklyMark = (isActive: boolean) => (
+    <span className={`schedule-mark ${isActive ? 'schedule-mark-on' : 'schedule-mark-off'}`}>
+      {isActive ? 'ON' : 'OFF'}
+    </span>
+  )
 
   const renderScheduleCells = (resource: ResourceStatus) => (
     <>
-      <td style={inactiveScheduleStyle}>❌️</td>
-      <td style={inactiveScheduleStyle}>✅</td>
-      <td style={inactiveScheduleStyle}>✅</td>
-      <td style={inactiveScheduleStyle}>✅</td>
-      <td style={inactiveScheduleStyle}>✅</td>
-      <td style={inactiveScheduleStyle}>✅</td>
-      <td style={inactiveScheduleStyle}>❌️</td>
-      <td style={inactiveScheduleStyle}>❌️</td>
-      <td style={inactiveScheduleStyle}>{resource.startDate || '-'}</td>
-      <td style={inactiveScheduleStyle}>{resource.stopDate || '-'}</td>
-      <td><strong style={inactiveScheduleStyle}>{resource.scheduleState}</strong></td>
-      <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#000' }}>{getManualModeStateForGroup(resource.groupName) || '-'}</strong></td>
+      <td className={scheduleCellClassName}>{renderWeeklyMark(false)}</td>
+      <td className={scheduleCellClassName}>{renderWeeklyMark(true)}</td>
+      <td className={scheduleCellClassName}>{renderWeeklyMark(true)}</td>
+      <td className={scheduleCellClassName}>{renderWeeklyMark(true)}</td>
+      <td className={scheduleCellClassName}>{renderWeeklyMark(true)}</td>
+      <td className={scheduleCellClassName}>{renderWeeklyMark(true)}</td>
+      <td className={scheduleCellClassName}>{renderWeeklyMark(false)}</td>
+      <td className={scheduleCellClassName}>{renderWeeklyMark(false)}</td>
+      <td className={scheduleCellClassName}>{resource.startDate || '-'}</td>
+      <td className={scheduleCellClassName}>{resource.stopDate || '-'}</td>
+      <td>
+        <span className={getScheduleBadgeClassName(resource.scheduleState)}>
+          {formatScheduleState(resource.scheduleState)}
+        </span>
+      </td>
+      <td>
+        <span className={getScheduleBadgeClassName(getManualModeStateForGroup(resource.groupName))}>
+          {formatScheduleState(getManualModeStateForGroup(resource.groupName))}
+        </span>
+      </td>
     </>
   )
 
@@ -435,134 +671,168 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
 
   if (error) {
     return (
-      <div style={{ padding: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h1>エラー</h1>
-          <div>
-            <span>ログイン中: {user.username}</span>
-            <button onClick={logout} style={{ marginLeft: '1rem', padding: '0.5rem 1rem' }}>
-              ログアウト
-            </button>
+      <main className="error-page">
+        <div className="app-container">
+          <header className="dashboard-header">
+            <div>
+              <h1 className="dashboard-title">エラー</h1>
+              <p className="dashboard-subtitle">ステータス情報の取得に失敗しました。</p>
+            </div>
+            <div className="user-menu">
+              <span className="user-pill">ログイン中: {user.username}</span>
+              <button onClick={logout}>
+                ログアウト
+              </button>
+            </div>
+          </header>
+          <div className="notice notice-danger">
+            <p><strong>エラー内容:</strong> {error}</p>
+          </div>
+          <div className="button-row" style={{ marginTop: '1rem' }}>
+            <button onClick={fetchStatus} className="button-primary">再試行</button>
           </div>
         </div>
-        <div style={{ backgroundColor: '#ffebee', padding: '1rem', marginBottom: '1rem', borderRadius: '4px' }}>
-          <p><strong>エラー内容:</strong> {error}</p>
-        </div>
-        <button onClick={fetchStatus} style={{ padding: '0.5rem 1rem' }}>再試行</button>
-      </div>
+      </main>
     )
   }
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h1>AWS リソース ダッシュボード</h1>
-        <div>
-          <span>ログイン中: {user.username}</span>
-          <button
-            onClick={logout}
-            style={{ marginLeft: '1rem', padding: '0.5rem 1rem' }}
-          >
-            ログアウト
-          </button>
-        </div>
-      </div>
-
-      {apiError && (
-        <div style={{ backgroundColor: '#ffebee', padding: '1rem', marginBottom: '1rem', borderRadius: '4px', border: '2px solid #f44336' }}>
-          <h3 style={{ margin: '0 0 0.5rem 0', color: '#d32f2f' }}>API接続エラー</h3>
-          <div style={{ margin: '0 0 0.5rem 0' }}>
-            <strong>エラー内容:</strong>
-            <pre style={{ margin: '0.5rem 0', padding: '0.5rem', backgroundColor: '#f5f5f5', borderRadius: '4px', fontSize: '0.9em', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {apiError}
-            </pre>
-          </div>
-          <p style={{ margin: '0', fontSize: '0.9em', color: '#666' }}>
-            APIサーバーでエラーが発生しています。管理者に連絡してください。
-          </p>
-        </div>
-      )}
-
-      <section>
-        <div style={{ backgroundColor: '#ccffff', padding: '10px', margin: '10px 0', border: '2px solid #00cccc', borderRadius: '4px' }}>
-          <p>
-            平日は指定された時刻に自動的に起動し、夜間に停止されます。<br />
-            土日・祝は終日サーバーを自動的に停止します。<br />
-            ECSは起動に3分程度、RDSは起動に15分程度掛かります。<br />
-          </p>
-        </div>
-      </section>
-
-      {isAdmin && <ConfigEditor onConfigSaved={fetchStatus} />}
-
-      <section>
-        <div style={{ backgroundColor: '#ffffcc', padding: '10px', margin: '10px 0', border: '2px solid #cccc00', borderRadius: '4px' }}>
-          <h2>マニュアルモード</h2>
-          <p>
-            マニュアルモード中はサーバーの自動起動と自動停止を行わなくなります。<br />
-            早朝の勤務や残業、休日に出勤された場合に使用することを想定しています。<br />
-          </p>
-          <strong>{manualModeStatus?.isActive ? '現在はマニュアルモード中です。' : '現在はマニュアルモードではありません。'}</strong>
-          <table border={1}>
-            <thead>
-              <tr>
-                <th>マニュアルモード設定状態</th>
-                <th>申請者</th>
-                <th>申請日時</th>
-                <th>解除予定日時</th>
-                <th>グループ状態</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{manualModeStatus?.manualScheduleState || '-'}</td>
-                <td>{manualModeStatus?.requester || '-'}</td>
-                <td>{manualModeStatus?.requestedAt ? new Date(manualModeStatus.requestedAt).toLocaleString('ja-JP') : '-'}</td>
-                <td>{manualModeStatus?.scheduledStopAt ? new Date(manualModeStatus.scheduledStopAt).toLocaleString('ja-JP') : '-'}</td>
-                <td>{formatManualGroupStates(manualModeStatus?.manualGroupStates)}</td>
-              </tr>
-            </tbody>
-          </table>
+    <main className="app-shell">
+      <div className="app-container">
+        <header className="dashboard-header">
           <div>
-            <button onClick={setupManualModeStartForm} disabled={operationLoading || showManualModeForm}>
-              サーバーを起動する
+            <h1 className="dashboard-title">AWS リソース ダッシュボード</h1>
+            <p className="dashboard-subtitle">
+              <span>ECSとRDSの稼働状態、スケジュール、マニュアルモードを確認できます。</span>
+              <span>平日は指定された時刻に自動的に起動し、夜間に停止されます。土日・祝は終日サーバーを自動的に停止します。ECSは起動に3分程度、RDSは起動に15分程度掛かります。</span>
+            </p>
+          </div>
+          <div className="user-menu">
+            <span className="user-pill">ログイン中: {user.username}</span>
+            <button onClick={logout}>
+              ログアウト
             </button>
           </div>
+        </header>
+
+        {apiError && (
+          <div className="notice notice-danger">
+            <h3 className="panel-title">API接続エラー</h3>
+            <p><strong>エラー内容:</strong></p>
+            <pre className="error-pre">{apiError}</pre>
+            <p>APIサーバーでエラーが発生しています。管理者に連絡してください。</p>
+          </div>
+        )}
+
+        {isAdmin && <ConfigEditor onConfigSaved={fetchStatus} />}
+
+        <section className="panel">
+          <div className="panel-inner">
+            <div className="panel-header">
+              <div>
+                <h2 className="panel-title">マニュアルモード</h2>
+                <p className="panel-caption">
+                  早朝勤務、残業、休日対応などでスケジューラーを一時的に止めて稼働状態を指定します。
+                </p>
+              </div>
+              <span className={manualModeStatus?.isActive ? 'status-badge status-badge-active' : 'status-badge status-badge-neutral'}>
+                {manualModeStatus?.isActive ? 'マニュアルモード中' : 'スケジューラーモード'}
+              </span>
+            </div>
+
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>マニュアルモード設定状態</th>
+                    <th>申請者</th>
+                    <th>申請日時</th>
+                    <th>解除予定日時</th>
+                    <th>グループ状態</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <span className={getScheduleBadgeClassName(manualModeStatus?.manualScheduleState)}>
+                        {formatScheduleState(manualModeStatus?.manualScheduleState)}
+                      </span>
+                    </td>
+                    <td>{manualModeStatus?.requester || '-'}</td>
+                    <td>{manualModeStatus?.requestedAt ? new Date(manualModeStatus.requestedAt).toLocaleString('ja-JP') : '-'}</td>
+                    <td>{manualModeStatus?.scheduledStopAt ? new Date(manualModeStatus.scheduledStopAt).toLocaleString('ja-JP') : '-'}</td>
+                    <td>{formatManualGroupStates(manualModeStatus?.manualGroupStates)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="manual-actions">
+              <button className="button-success" onClick={setupManualModeStartForm} disabled={operationLoading || showManualModeForm}>
+                サーバーを起動する
+              </button>
+              <button className="button-danger" onClick={submitManualModeStopRequest} disabled={operationLoading}>
+                サーバーを停止する
+              </button>
+              <button onClick={cancelManualMode} disabled={operationLoading || !manualModeStatus?.isActive}>
+                マニュアルモードを解除する
+              </button>
+            </div>
+
           {showManualModeForm && (
-            <div style={{ backgroundColor: '#f0f8ff', padding: '15px', margin: '10px 0', border: '2px solid #4169e1', borderRadius: '4px' }}>
+            <div className="manual-form">
               <h3>起動申請</h3>
-              <form onSubmit={submitManualModeStartRequest}>
-                <div style={{ marginBottom: '15px' }}>
-                  <label>
-                    停止日時:
-                    <input
-                      type="datetime-local"
-                      value={manualModeFormData.scheduledDate}
-                      onChange={(e) => handleManualModeFormDataChange('scheduledDate', e.target.value)}
-                      style={{ marginLeft: '10px', padding: '5px' }}
-                      disabled={operationLoading || manualModeFormData.isIndefinite}
-                      required={!manualModeFormData.isIndefinite}
-                    />
-                  </label>
-                </div>
-                <div style={{ marginBottom: '10px' }}>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={manualModeFormData.isIndefinite}
-                      onChange={(e) => handleManualModeFormDataChange('isIndefinite', e.target.checked)}
-                      disabled={operationLoading}
-                    />
-                    停止しない（手動解除まで起動状態を維持）
-                  </label>
-                </div>
-                <fieldset style={{ marginBottom: '15px' }}>
+              <form onSubmit={submitManualModeStartRequest} className="form-stack">
+                <fieldset className="manual-date-fieldset" disabled={operationLoading || manualModeFormData.isIndefinite}>
+                  <legend>停止日時</legend>
+                  <div className="manual-date-grid">
+                    <div className="manual-date-field">
+                      <span className="manual-date-label">日付</span>
+                      <ManualDateCalendar
+                        selectedDateValue={manualModeFormData.scheduledDate}
+                        displayMonth={manualCalendarMonth}
+                        minDate={new Date()}
+                        onDisplayMonthChange={setManualCalendarMonth}
+                        onDateSelect={handleManualDateSelect}
+                      />
+                    </div>
+                    <label className="date-part-field time-field">
+                      <span>時刻</span>
+                      <TimePickerInput
+                        ariaLabel="停止時刻"
+                        value={manualModeFormData.scheduledTime}
+                        onValueChange={(value) => handleManualModeFormDataChange('scheduledTime', value)}
+                      />
+                    </label>
+                  </div>
+                  <div className="manual-time-presets">
+                    <button type="button" onClick={() => applyManualTimePreset(22, 0, true)}>
+                      22時
+                    </button>
+                    <button type="button" onClick={() => applyManualTimePreset(23, 0, true)}>
+                      23時
+                    </button>
+                    <button type="button" className="button-night" onClick={() => applyManualTimePreset(0, 10)}>
+                      終電
+                    </button>
+                  </div>
+                </fieldset>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={manualModeFormData.isIndefinite}
+                    onChange={(e) => handleManualModeFormDataChange('isIndefinite', e.target.checked)}
+                    disabled={operationLoading}
+                  />
+                  停止しない（手動解除まで起動状態を維持）
+                </label>
+                <fieldset className="group-fieldset">
                   <legend>起動するグループ</legend>
                   {resourceGroups.length === 0 ? (
-                    <p style={{ margin: '5px 0', color: '#666' }}>グループ情報を取得中...</p>
+                    <p className="empty-state">グループ情報を取得中...</p>
                   ) : (
                     resourceGroups.map(group => (
-                      <label key={group.groupName} style={{ display: 'block', margin: '6px 0' }}>
+                      <label key={group.groupName} className="checkbox-label">
                         <input
                           type="checkbox"
                           checked={manualModeFormData.groupStates[group.groupName] === 'active'}
@@ -574,8 +844,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                     ))
                   )}
                 </fieldset>
-                <div>
-                  <button type="submit" disabled={operationLoading} style={{ marginRight: '10px' }}>
+                <div className="button-row">
+                  <button type="submit" className="button-primary" disabled={operationLoading}>
                     申請する
                   </button>
                   <button type="button" onClick={cancelManualModeForm} disabled={operationLoading}>
@@ -585,79 +855,109 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
               </form>
             </div>
           )}
-          <div>
-            <button onClick={submitManualModeStopRequest} disabled={operationLoading}>
-              サーバーを停止する
-            </button>
           </div>
-          <div>
-            <button onClick={cancelManualMode} disabled={operationLoading || !manualModeStatus?.isActive}>
-              マニュアルモードを解除する
-            </button>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section>
-        <div style={{ backgroundColor: '#f0f8ff', padding: '15px', margin: '10px 0', border: '2px solid #4169e1', borderRadius: '4px' }}>
-          <h2>リソース状態（グループ別）</h2>
-          {resourceStatusGroups.length === 0 ? (
-            <p style={{ color: '#666', fontStyle: 'italic' }}>リソース情報を取得中...</p>
-          ) : (
-            resourceStatusGroups.map(group => (
-              <div key={group.groupName} style={{ marginTop: '12px' }}>
-                <h3 style={{ margin: '0 0 8px 0' }}>グループ: {group.groupName}</h3>
-                <table border={1}>
-                  <thead>
-                    <tr>
-                      <th>種別</th>
-                      <th>クラスター名</th>
-                      <th>サービス名</th>
-                      <th>希望台数</th>
-                      <th>実行中</th>
-                      <th>開始中</th>
-                      <th>状態</th>
-                      <th>日</th>
-                      <th>月</th>
-                      <th>火</th>
-                      <th>水</th>
-                      <th>木</th>
-                      <th>金</th>
-                      <th>土</th>
-                      <th>祝</th>
-                      <th>開始時刻</th>
-                      <th>停止時刻</th>
-                      <th>スケジュール状態</th>
-                      <th>マニュアルモード状態</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {group.resources.map(resource => (
-                      <tr key={`${resource.resourceType}/${resource.accountId}/${resource.groupName}/${resource.clusterName}/${resource.serviceName}`}>
-                        <td>{resource.resourceType}</td>
-                        <td>{resource.clusterName}</td>
-                        <td>{resource.serviceName}</td>
-                        <td>{resource.desiredCount}</td>
-                        <td>{resource.runningCount}</td>
-                        <td>{resource.pendingCount}</td>
-                        <td>{resource.status}</td>
-                        {renderScheduleCells(resource)}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        <section className="panel">
+          <div className="panel-inner">
+            <div className="panel-header">
+              <div>
+                <h2 className="panel-title">リソース状態（グループ別）</h2>
+                <p className="panel-caption">スケジュールと現在の実行状態をグループごとに表示します。</p>
               </div>
-            ))
-          )}
-        </div>
-      </section>
+              <span className="status-badge status-badge-neutral">{resourceStatuses.length} resources</span>
+            </div>
 
-      <div>
-        <p>最終更新: {new Date().toLocaleString('ja-JP')}</p>
-        <p>最終スケジュール実行時刻: {lastScheduleExecution ? new Date(lastScheduleExecution).toLocaleString('ja-JP') : '-'}</p>
-        <p>次のスケジュール実行時刻: {nextScheduleExecution ? new Date(nextScheduleExecution).toLocaleString('ja-JP') : '-'}</p>
-        <button onClick={fetchStatus}>更新</button>
+            {resourceStatusGroups.length === 0 ? (
+              <p className="empty-state">リソース情報を取得中...</p>
+            ) : (
+              <div className="section-stack">
+                {resourceStatusGroups.map(group => (
+                  <div key={group.groupName} className="resource-group">
+                    <div className="resource-group-header">
+                      <h3 className="resource-group-title">グループ: {group.groupName}</h3>
+                      <span className="status-badge status-badge-neutral">{group.resources.length}件</span>
+                    </div>
+                    <div className="table-wrap">
+                      <table className="resource-status-table">
+                        <colgroup>
+                          <col className="resource-col-type" />
+                          <col className="resource-col-name" />
+                          <col className="resource-col-name" />
+                          <col className="resource-col-count" />
+                          <col className="resource-col-count" />
+                          <col className="resource-col-count" />
+                          <col className="resource-col-status" />
+                          <col className="resource-col-day" />
+                          <col className="resource-col-day" />
+                          <col className="resource-col-day" />
+                          <col className="resource-col-day" />
+                          <col className="resource-col-day" />
+                          <col className="resource-col-day" />
+                          <col className="resource-col-day" />
+                          <col className="resource-col-day" />
+                          <col className="resource-col-time" />
+                          <col className="resource-col-time" />
+                          <col className="resource-col-state" />
+                          <col className="resource-col-manual" />
+                        </colgroup>
+                        <thead>
+                          <tr>
+                            <th>種別</th>
+                            <th>クラスター名</th>
+                            <th>サービス名</th>
+                            <th>希望台数</th>
+                            <th>実行中</th>
+                            <th>開始中</th>
+                            <th>状態</th>
+                            <th>日</th>
+                            <th>月</th>
+                            <th>火</th>
+                            <th>水</th>
+                            <th>木</th>
+                            <th>金</th>
+                            <th>土</th>
+                            <th>祝</th>
+                            <th>開始時刻</th>
+                            <th>停止時刻</th>
+                            <th>スケジュール状態</th>
+                            <th>マニュアルモード状態</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.resources.map(resource => (
+                            <tr key={`${resource.resourceType}/${resource.accountId}/${resource.groupName}/${resource.clusterName}/${resource.serviceName}`}>
+                              <td>
+                                <span className="status-badge status-badge-neutral">{resource.resourceType}</span>
+                              </td>
+                              <td className="resource-name-cell">{resource.clusterName}</td>
+                              <td className="resource-name-cell">{resource.serviceName || '-'}</td>
+                              <td>{resource.desiredCount}</td>
+                              <td>{resource.runningCount}</td>
+                              <td>{resource.pendingCount}</td>
+                              <td>{resource.status}</td>
+                              {renderScheduleCells(resource)}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <footer className="footer-bar">
+          <div className="footer-meta">
+            <p>最終更新: {new Date().toLocaleString('ja-JP')}</p>
+            <p>最終スケジュール実行時刻: {lastScheduleExecution ? new Date(lastScheduleExecution).toLocaleString('ja-JP') : '-'}</p>
+            <p>次のスケジュール実行時刻: {nextScheduleExecution ? new Date(nextScheduleExecution).toLocaleString('ja-JP') : '-'}</p>
+          </div>
+          <button onClick={fetchStatus} className="button-primary">更新</button>
+        </footer>
       </div>
-    </div>
+    </main>
   )
 }
