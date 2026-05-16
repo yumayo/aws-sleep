@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { fetchWithCsrf } from '../api-client'
 
 interface ScheduleConfigEcsItem {
@@ -82,6 +82,132 @@ const emptyConfig: Config = {
   awsAccounts: [],
   ecsItems: [],
   rdsItems: []
+}
+
+const credentialInputProps = {
+  autoComplete: 'off',
+  autoCorrect: 'off',
+  autoCapitalize: 'none',
+  spellCheck: false,
+  'data-1p-ignore': 'true',
+  'data-lpignore': 'true'
+}
+
+interface MaskedCredentialInputProps {
+  value: string
+  placeholder?: string
+  onValueChange: (value: string) => void
+}
+
+function MaskedCredentialInput({ value, placeholder, onValueChange }: MaskedCredentialInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const displayValue = '*'.repeat(value.length)
+
+  const setCursor = (position: number) => {
+    requestAnimationFrame(() => {
+      inputRef.current?.setSelectionRange(position, position)
+    })
+  }
+
+  const replaceRange = (input: HTMLInputElement, replacement: string, start = input.selectionStart ?? value.length, end = input.selectionEnd ?? start) => {
+    const nextValue = `${value.slice(0, start)}${replacement}${value.slice(end)}`
+    const nextCursor = start + replacement.length
+    onValueChange(nextValue)
+    setCursor(nextCursor)
+  }
+
+  const removeRange = (start: number, end: number) => {
+    onValueChange(`${value.slice(0, start)}${value.slice(end)}`)
+    setCursor(start)
+  }
+
+  const handleBeforeInput = (event: FormEvent<HTMLInputElement>) => {
+    const nativeEvent = event.nativeEvent as InputEvent
+    if (nativeEvent.isComposing) {
+      return
+    }
+
+    if (nativeEvent.inputType === 'insertText' || nativeEvent.inputType === 'insertCompositionText') {
+      event.preventDefault()
+      replaceRange(event.currentTarget, nativeEvent.data ?? '')
+    }
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    const input = event.currentTarget
+    const start = input.selectionStart ?? value.length
+    const end = input.selectionEnd ?? start
+
+    if (event.key === 'Backspace') {
+      event.preventDefault()
+      if (start !== end) {
+        removeRange(start, end)
+      } else if (start > 0) {
+        removeRange(start - 1, start)
+      }
+    }
+
+    if (event.key === 'Delete') {
+      event.preventDefault()
+      if (start !== end) {
+        removeRange(start, end)
+      } else if (start < value.length) {
+        removeRange(start, start + 1)
+      }
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault()
+    }
+  }
+
+  const handlePaste = (event: ClipboardEvent<HTMLInputElement>) => {
+    event.preventDefault()
+    replaceRange(event.currentTarget, event.clipboardData.getData('text'))
+  }
+
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextDisplayValue = event.target.value
+    if (nextDisplayValue === displayValue) {
+      return
+    }
+
+    let prefixLength = 0
+    while (
+      prefixLength < displayValue.length &&
+      prefixLength < nextDisplayValue.length &&
+      displayValue[prefixLength] === nextDisplayValue[prefixLength]
+    ) {
+      prefixLength += 1
+    }
+
+    let suffixLength = 0
+    while (
+      suffixLength < displayValue.length - prefixLength &&
+      suffixLength < nextDisplayValue.length - prefixLength &&
+      displayValue[displayValue.length - suffixLength - 1] === nextDisplayValue[nextDisplayValue.length - suffixLength - 1]
+    ) {
+      suffixLength += 1
+    }
+
+    const insertedValue = nextDisplayValue.slice(prefixLength, nextDisplayValue.length - suffixLength)
+    onValueChange(`${value.slice(0, prefixLength)}${insertedValue}${value.slice(value.length - suffixLength)}`)
+  }
+
+  return (
+    <input
+      {...credentialInputProps}
+      ref={inputRef}
+      type="text"
+      value={displayValue}
+      placeholder={placeholder}
+      onBeforeInput={handleBeforeInput}
+      onChange={handleChange}
+      onKeyDown={handleKeyDown}
+      onPaste={handlePaste}
+      style={{ width: '100%' }}
+    />
+  )
 }
 
 export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
@@ -410,15 +536,29 @@ export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
                   </label>
                   <label>
                     アクセスキーID
-                    <input value={account.accessKeyId ?? ''} placeholder={account.hasAccessKeyId ? '保存済み' : ''} onChange={(e) => updateAccount(index, { accessKeyId: e.target.value })} style={{ width: '100%' }} />
+                    <input
+                      {...credentialInputProps}
+                      value={account.accessKeyId ?? ''}
+                      placeholder={account.hasAccessKeyId ? '保存済み' : ''}
+                      onChange={(e) => updateAccount(index, { accessKeyId: e.target.value })}
+                      style={{ width: '100%' }}
+                    />
                   </label>
                   <label>
                     シークレットアクセスキー
-                    <input type="password" value={account.secretAccessKey ?? ''} placeholder={account.hasSecretAccessKey ? '保存済み' : ''} onChange={(e) => updateAccount(index, { secretAccessKey: e.target.value })} style={{ width: '100%' }} />
+                    <MaskedCredentialInput
+                      value={account.secretAccessKey ?? ''}
+                      placeholder={account.hasSecretAccessKey ? '保存済み' : ''}
+                      onValueChange={(value) => updateAccount(index, { secretAccessKey: value })}
+                    />
                   </label>
                   <label>
                     セッショントークン
-                    <input type="password" value={account.sessionToken ?? ''} placeholder={account.hasSessionToken ? '保存済み' : ''} onChange={(e) => updateAccount(index, { sessionToken: e.target.value })} style={{ width: '100%' }} />
+                    <MaskedCredentialInput
+                      value={account.sessionToken ?? ''}
+                      placeholder={account.hasSessionToken ? '保存済み' : ''}
+                      onValueChange={(value) => updateAccount(index, { sessionToken: value })}
+                    />
                   </label>
                 </div>
                 <div style={{ marginTop: '8px' }}>
