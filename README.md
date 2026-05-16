@@ -67,16 +67,15 @@ make setup
       "startDate": "8:40",
       "stopDate": "21:00"
     }
-  ],
-  "awsRegion": "ap-northeast-1"
+  ]
 }
 ```
 
-`awsAccounts` を省略した場合は従来どおり `awsRegion` と実行環境のAWS認証情報を使用します。
-`awsAccounts` を複数設定する場合は、各 `ecsItems` / `rdsItems` に `accountId` を指定してください。
+`awsAccounts` は必須です。各アカウントには `accountId` と `awsRegion` を指定してください。
+各 `ecsItems` / `rdsItems` には `accountId` を指定してください。
 `credentialProfile` を指定したアカウントはAWSプロファイルを使用します。未指定のアカウントは実行環境のAWS認証情報を使用します。
 
-`groupName` はマニュアルモードで起動する対象を選択するためのグループです。省略したリソースは `default` グループになります。マニュアルモードの起動申請では、グループごとに起動する/起動しないを選択できます。
+`groupName` はマニュアルモードで起動する対象を選択するためのグループです。各 `ecsItems` / `rdsItems` に必ず指定してください。マニュアルモードの起動申請では、グループごとに起動する/起動しないを選択できます。
 
 ## 動作確認
 
@@ -180,6 +179,8 @@ ECSはCloudFormationテンプレート上で固定名を使用しているため
 
 ```json
 {
+  "accountId": "dev",
+  "groupName": "web",
   "clusterName": "sample-cluster",
   "serviceName": "sample-service-1",
   "desiredCount": 1,
@@ -196,7 +197,7 @@ docker compose exec script aws cloudformation describe-stacks \
   --query 'Stacks[0].Outputs'
 ```
 
-このコマンドで確認した `ClusterIdentifier` を、`app/api/data/config.json` の `rdsItems[].clusterName` に設定します。
+このコマンドで確認した `ClusterIdentifier` を、`accountId` / `groupName` / `startDate` / `stopDate` と合わせて `app/api/data/config.json` の `rdsItems` に設定します。
 
 ### CloudFormationデプロイコマンドについて
 

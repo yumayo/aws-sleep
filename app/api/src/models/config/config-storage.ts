@@ -1,15 +1,11 @@
 import { JsonStorage } from '@app/lib'
 import { AwsAccountConfig, Config, ResourceGroup, ScheduleConfigEcsItem, ScheduleConfigRdsItem } from '../../types/scheduler-types'
 
-export const DEFAULT_ACCOUNT_ID = 'default'
-export const DEFAULT_ACCOUNT_NAME = 'Default Account'
-export const DEFAULT_GROUP_NAME = 'default'
-
 export class ConfigStorage {
   private readonly storage: JsonStorage<Config>
 
-  constructor() {
-    this.storage = new JsonStorage<Config>('config.json', './data')
+  constructor(dataDir: string = './data') {
+    this.storage = new JsonStorage<Config>('config.json', dataDir)
   }
 
   async load(): Promise<Config> {
@@ -19,46 +15,43 @@ export class ConfigStorage {
       throw new Error('Schedule config file not found. Please create data/config.json')
     }
 
-    this.validateAwsAccounts(config)
+    this.validateConfigRoot(config)
+    const accountIds = this.validateAwsAccounts(config)
 
     // 設定値の検証
-    if (config.ecsItems) {
-      for (const item of config.ecsItems) {
-        this.validateItemMetadata(config, item, 'ECS')
+    for (const item of config.ecsItems) {
+      this.validateItemMetadata(accountIds, item, 'ECS')
 
-        if (!item.clusterName || !item.serviceName) {
-          throw new Error('Each ECS config item must have clusterName and serviceName')
-        }
+      if (!item.clusterName || !item.serviceName) {
+        throw new Error('Each ECS config item must have clusterName and serviceName')
+      }
 
-        if (typeof item.desiredCount !== 'number' || item.desiredCount < 0) {
-          throw new Error('ECS config must have valid desiredCount (positive number)')
-        }
+      if (typeof item.desiredCount !== 'number' || item.desiredCount < 0) {
+        throw new Error('ECS config must have valid desiredCount (positive number)')
+      }
 
-        if (item.startDate === undefined || item.stopDate === undefined) {
-          throw new Error('ECS config must have startDate and stopDate configuration')
-        }
+      if (item.startDate === undefined || item.stopDate === undefined) {
+        throw new Error('ECS config must have startDate and stopDate configuration')
+      }
 
-        if (!this.isValidTimeFormat(item.startDate) || !this.isValidTimeFormat(item.stopDate)) {
-          throw new Error('Time format must be HH:MM (e.g., 09:00, 21:30)')
-        }
+      if (!this.isValidTimeFormat(item.startDate) || !this.isValidTimeFormat(item.stopDate)) {
+        throw new Error('Time format must be HH:MM (e.g., 09:00, 21:30)')
       }
     }
     
-    if (config.rdsItems) {
-      for (const item of config.rdsItems) {
-        this.validateItemMetadata(config, item, 'RDS')
+    for (const item of config.rdsItems) {
+      this.validateItemMetadata(accountIds, item, 'RDS')
 
-        if (!item.clusterName) {
-          throw new Error('Each RDS config item must have clusterName')
-        }
+      if (!item.clusterName) {
+        throw new Error('Each RDS config item must have clusterName')
+      }
 
-        if (item.startDate === undefined || item.stopDate === undefined) {
-          throw new Error('RDS config must have startDate and stopDate configuration')
-        }
+      if (item.startDate === undefined || item.stopDate === undefined) {
+        throw new Error('RDS config must have startDate and stopDate configuration')
+      }
 
-        if (!this.isValidTimeFormat(item.startDate) || !this.isValidTimeFormat(item.stopDate)) {
-          throw new Error('Time format must be HH:MM (e.g., 09:00, 21:30)')
-        }
+      if (!this.isValidTimeFormat(item.startDate) || !this.isValidTimeFormat(item.stopDate)) {
+        throw new Error('Time format must be HH:MM (e.g., 09:00, 21:30)')
       }
     }
 
@@ -66,35 +59,15 @@ export class ConfigStorage {
   }
 
   getAwsAccounts(config: Config): AwsAccountConfig[] {
-    if (!config.awsAccounts || config.awsAccounts.length === 0) {
-      return [{
-        accountId: DEFAULT_ACCOUNT_ID,
-        accountName: DEFAULT_ACCOUNT_NAME,
-        awsRegion: config.awsRegion
-      }]
-    }
-
-    return config.awsAccounts.map(account => ({
-      ...account,
-      awsRegion: account.awsRegion ?? config.awsRegion
-    }))
+    return config.awsAccounts
   }
 
-  getItemAccountId(config: Config, item: ScheduleConfigEcsItem | ScheduleConfigRdsItem): string {
-    if (item.accountId) {
-      return item.accountId
-    }
-
-    const accounts = this.getAwsAccounts(config)
-    if (accounts.length === 1) {
-      return accounts[0].accountId
-    }
-
-    throw new Error('accountId is required when multiple awsAccounts are configured')
+  getItemAccountId(item: ScheduleConfigEcsItem | ScheduleConfigRdsItem): string {
+    return item.accountId
   }
 
   getItemGroupName(item: ScheduleConfigEcsItem | ScheduleConfigRdsItem): string {
-    return item.groupName ?? DEFAULT_GROUP_NAME
+    return item.groupName
   }
 
   getResourceGroups(config: Config): ResourceGroup[] {
@@ -112,12 +85,25 @@ export class ConfigStorage {
       .sort((a, b) => a.groupName.localeCompare(b.groupName))
   }
 
-  private validateAwsAccounts(config: Config): void {
-    const accounts = this.getAwsAccounts(config)
+  private validateConfigRoot(config: Config): void {
+    if (!Array.isArray(config.awsAccounts) || config.awsAccounts.length === 0) {
+      throw new Error('Config must have at least one awsAccounts entry')
+    }
+
+    if (!Array.isArray(config.ecsItems)) {
+      throw new Error('Config must have ecsItems array')
+    }
+
+    if (!Array.isArray(config.rdsItems)) {
+      throw new Error('Config must have rdsItems array')
+    }
+  }
+
+  private validateAwsAccounts(config: Config): Set<string> {
     const accountIds = new Set<string>()
 
-    for (const account of accounts) {
-      if (!account.accountId) {
+    for (const account of config.awsAccounts) {
+      if (!account.accountId || account.accountId.trim() === '') {
         throw new Error('Each AWS account config must have accountId')
       }
 
@@ -126,27 +112,25 @@ export class ConfigStorage {
       }
       accountIds.add(account.accountId)
 
-      if (!account.awsRegion) {
-        throw new Error(`AWS account ${account.accountId} must have awsRegion or global awsRegion`)
+      if (!account.awsRegion || account.awsRegion.trim() === '') {
+        throw new Error(`AWS account ${account.accountId} must have awsRegion`)
       }
-
     }
+
+    return accountIds
   }
 
-  private validateItemMetadata(config: Config, item: ScheduleConfigEcsItem | ScheduleConfigRdsItem, itemType: string): void {
-    const accounts = this.getAwsAccounts(config)
-    const accountIds = new Set(accounts.map(account => account.accountId))
-
-    if (!item.accountId && accounts.length > 1) {
-      throw new Error(`${itemType} config must have accountId when multiple awsAccounts are configured`)
+  private validateItemMetadata(accountIds: Set<string>, item: ScheduleConfigEcsItem | ScheduleConfigRdsItem, itemType: string): void {
+    if (!item.accountId || item.accountId.trim() === '') {
+      throw new Error(`${itemType} config must have accountId`)
     }
 
-    if (item.accountId && !accountIds.has(item.accountId)) {
+    if (!accountIds.has(item.accountId)) {
       throw new Error(`${itemType} config references unknown accountId: ${item.accountId}`)
     }
 
-    if (item.groupName !== undefined && item.groupName.trim() === '') {
-      throw new Error(`${itemType} config groupName must not be empty`)
+    if (!item.groupName || item.groupName.trim() === '') {
+      throw new Error(`${itemType} config must have groupName`)
     }
   }
 
@@ -166,7 +150,7 @@ export class ConfigStorage {
   async getDesiredCount(accountId: string, clusterName: string, serviceName: string): Promise<number | null> {
     const config = await this.load()
     const ecsItem = config.ecsItems?.find(item => 
-      this.getItemAccountId(config, item) === accountId && item.clusterName === clusterName && item.serviceName === serviceName
+      this.getItemAccountId(item) === accountId && item.clusterName === clusterName && item.serviceName === serviceName
     )
     return ecsItem?.desiredCount ?? null
   }

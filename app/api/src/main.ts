@@ -78,8 +78,8 @@ const getAccountName = (accountId: string): string => {
 }
 const manualModeStorage = new ManualModeStorage()
 const manualModeController = new ManualModeController(manualModeStorage)
-const ecsScheduleActions = config.ecsItems.map((x) => new EcsScheduleAction(getEcsService(configStorage.getItemAccountId(config, x)), x))
-const rdsScheduleActions = config.rdsItems.map((x) => new RdsScheduleAction(getRdsService(configStorage.getItemAccountId(config, x)), x))
+const ecsScheduleActions = config.ecsItems.map((x) => new EcsScheduleAction(getEcsService(configStorage.getItemAccountId(x)), x))
+const rdsScheduleActions = config.rdsItems.map((x) => new RdsScheduleAction(getRdsService(configStorage.getItemAccountId(x)), x))
 const allScheduleActions = [...ecsScheduleActions, ...rdsScheduleActions]
 const scheduler = new Scheduler(allScheduleActions, manualModeStorage)
 const schedulerController = new SchedulerController(scheduler)
@@ -125,7 +125,7 @@ fastify.get('/ecs/status', { preHandler: authMiddleware.authenticate }, async (_
     const now = new Date()
     const statusList = await Promise.all(
       config.ecsItems.map(async (ecs) => {
-        const accountId = configStorage.getItemAccountId(config, ecs)
+        const accountId = configStorage.getItemAccountId(ecs)
         const groupName = configStorage.getItemGroupName(ecs)
         const serviceStatus = await getEcsService(accountId).getServiceStatus(ecs.clusterName, ecs.serviceName)
         const schedule = {
@@ -162,7 +162,7 @@ fastify.get('/rds/status', { preHandler: authMiddleware.authenticate }, async (_
     const now = new Date()
     const statusList = await Promise.all(
       config.rdsItems.map(async (rds) => {
-        const accountId = configStorage.getItemAccountId(config, rds)
+        const accountId = configStorage.getItemAccountId(rds)
         const groupName = configStorage.getItemGroupName(rds)
         const clusterInfo = await getRdsService(accountId).getClusterInfo(rds.clusterName)
         const schedule = {

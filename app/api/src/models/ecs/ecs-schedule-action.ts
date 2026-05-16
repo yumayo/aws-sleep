@@ -1,5 +1,4 @@
 import { Schedule, ScheduleAction, ScheduleState, ScheduleConfigEcsItem } from "../../types/scheduler-types"
-import { DEFAULT_GROUP_NAME } from "../config/config-storage"
 import { EcsService } from "./ecs-service"
 
 export class EcsScheduleAction implements ScheduleAction {
@@ -16,7 +15,7 @@ export class EcsScheduleAction implements ScheduleAction {
   }
 
   getGroupName(): string {
-    return this.config.groupName ?? DEFAULT_GROUP_NAME
+    return this.config.groupName
   }
 
   async invoke(state: ScheduleState): Promise<void> {

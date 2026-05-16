@@ -12,8 +12,8 @@ export interface Schedule {
 }
 
 export interface ScheduleConfigEcsItem {
-  accountId?: string
-  groupName?: string
+  accountId: string
+  groupName: string
   clusterName: string
   serviceName: string
   desiredCount: number
@@ -22,8 +22,8 @@ export interface ScheduleConfigEcsItem {
 }
 
 export interface ScheduleConfigRdsItem {
-  accountId?: string
-  groupName?: string
+  accountId: string
+  groupName: string
   clusterName: string
   startDate: string
   stopDate: string
@@ -32,16 +32,14 @@ export interface ScheduleConfigRdsItem {
 export interface AwsAccountConfig {
   accountId: string
   accountName?: string
-  awsRegion?: string
+  awsRegion: string
   credentialProfile?: string
 }
 
 export interface Config {
   ecsItems: ScheduleConfigEcsItem[]
   rdsItems: ScheduleConfigRdsItem[]
-  awsRegion: string
-  delayHour: number
-  awsAccounts?: AwsAccountConfig[]
+  awsAccounts: AwsAccountConfig[]
 }
 
 export interface ResourceGroup {

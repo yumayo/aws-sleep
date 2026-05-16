@@ -4,7 +4,7 @@
 environment:
 	mkdir -p app/api/data
 	mkdir -p app/script/data
-	[ ! -f app/api/data/config.json ] && echo '{"ecsItems":[],"rdsItems":[],"awsRegion":"ap-northeast-1"}' > app/api/data/config.json || true
+	[ ! -f app/api/data/config.json ] && echo '{"awsAccounts":[{"accountId":"local","awsRegion":"ap-northeast-1"}],"ecsItems":[],"rdsItems":[]}' > app/api/data/config.json || true
 	[ ! -f env/api/.env ] && cp env/api/.env.example env/api/.env || true
 	[ ! -f env/script/.env ] && cp env/script/.env.example env/script/.env || true
 
