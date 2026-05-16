@@ -17,6 +17,7 @@ import { AwsDiscoveryService } from './models/aws/aws-discovery-service'
 import { Scheduler } from './models/scheduler/scheduler'
 import { EcsScheduleAction } from './models/ecs/ecs-schedule-action'
 import { RdsScheduleAction } from './models/rds/rds-schedule-action'
+import { toPublicConfig } from './models/config/public-config'
 import { AwsAccountConfig, Config, ScheduleAction, ScheduleState } from './types/scheduler-types'
 import { calculateScheduleState } from './models/scheduler/schedule-state-calculator'
 
@@ -143,25 +144,7 @@ const normalizeManualGroupStates = (scheduleState: ScheduleState, groupStates: u
   )
 }
 
-type PublicAwsAccountConfig = Omit<AwsAccountConfig, 'secretAccessKey' | 'sessionToken'> & {
-  hasSecretAccessKey: boolean
-  hasSessionToken: boolean
-}
-
-type PublicConfig = Omit<Config, 'awsAccounts'> & {
-  awsAccounts: PublicAwsAccountConfig[]
-}
-
 const hasOwnProperty = (value: object, key: string): boolean => Object.prototype.hasOwnProperty.call(value, key)
-
-const redactConfig = (sourceConfig: Config): PublicConfig => ({
-  ...sourceConfig,
-  awsAccounts: sourceConfig.awsAccounts.map(({ secretAccessKey, sessionToken, ...account }) => ({
-    ...account,
-    hasSecretAccessKey: !!secretAccessKey,
-    hasSessionToken: !!sessionToken
-  }))
-})
 
 const mergeStoredCredentials = (account: AwsAccountConfig, rawAccount: object): AwsAccountConfig => {
   const existingAccount = account.accountId
@@ -265,7 +248,7 @@ const normalizeDiscoveryAccount = (body: unknown): AwsAccountConfig => {
 
 fastify.get('/config', { preHandler: [authMiddleware.authenticate, authMiddleware.requireAdmin] }, async (_request, reply) => {
   try {
-    return { status: 'success', config: redactConfig(config) }
+    return { status: 'success', config: toPublicConfig(config) }
   } catch (error) {
     reply.code(500)
     return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
@@ -277,7 +260,7 @@ fastify.put('/config', { preHandler: [authMiddleware.authenticate, authMiddlewar
     const nextConfig = normalizeConfigForSave(request.body)
     await configStorage.save(nextConfig)
     applyConfig(nextConfig)
-    return { status: 'success', config: redactConfig(config) }
+    return { status: 'success', config: toPublicConfig(config) }
   } catch (error) {
     reply.code(400)
     return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }

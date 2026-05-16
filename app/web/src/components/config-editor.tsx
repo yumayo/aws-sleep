@@ -27,6 +27,7 @@ interface AwsAccountConfig {
   accessKeyId?: string
   secretAccessKey?: string
   sessionToken?: string
+  hasAccessKeyId?: boolean
   hasSecretAccessKey?: boolean
   hasSessionToken?: boolean
 }
@@ -409,7 +410,7 @@ export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
                   </label>
                   <label>
                     アクセスキーID
-                    <input value={account.accessKeyId ?? ''} onChange={(e) => updateAccount(index, { accessKeyId: e.target.value })} style={{ width: '100%' }} />
+                    <input value={account.accessKeyId ?? ''} placeholder={account.hasAccessKeyId ? '保存済み' : ''} onChange={(e) => updateAccount(index, { accessKeyId: e.target.value })} style={{ width: '100%' }} />
                   </label>
                   <label>
                     シークレットアクセスキー
