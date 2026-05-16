@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { AuthUser } from '../types/auth-types.js'
 import { JwtUtil } from '../models/auth/jwt-util.js'
+import { isAdminUsername } from '../models/auth/admin-user.js'
 
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
@@ -49,6 +50,15 @@ export class AuthMiddleware {
     }
   }
 
+  requireAdmin = async (request: FastifyRequest, reply: FastifyReply) => {
+    if (request.user?.isAdmin) {
+      return
+    }
+
+    reply.code(403)
+    return reply.send({ error: '管理者権限が必要です' })
+  }
+
   authenticate = async (request: FastifyRequest, reply: FastifyReply) => {
     console.log('認証チェック開始:', {
       url: request.url,
@@ -84,7 +94,10 @@ export class AuthMiddleware {
       return reply.send({ error: 'トークンが無効です' })
     }
 
-    const user: AuthUser = { username: tokenPayload.username }
+    const user: AuthUser = {
+      username: tokenPayload.username,
+      isAdmin: isAdminUsername(tokenPayload.username)
+    }
     console.log('認証成功:', { username: user.username, url: request.url })
     request.user = user
   }

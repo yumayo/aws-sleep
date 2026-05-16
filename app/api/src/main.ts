@@ -263,7 +263,7 @@ const normalizeDiscoveryAccount = (body: unknown): AwsAccountConfig => {
   return normalizedAccount
 }
 
-fastify.get('/config', { preHandler: authMiddleware.authenticate }, async (_request, reply) => {
+fastify.get('/config', { preHandler: [authMiddleware.authenticate, authMiddleware.requireAdmin] }, async (_request, reply) => {
   try {
     return { status: 'success', config: redactConfig(config) }
   } catch (error) {
@@ -272,7 +272,7 @@ fastify.get('/config', { preHandler: authMiddleware.authenticate }, async (_requ
   }
 })
 
-fastify.put('/config', { preHandler: [authMiddleware.authenticate, authMiddleware.requireCsrf] }, async (request, reply) => {
+fastify.put('/config', { preHandler: [authMiddleware.authenticate, authMiddleware.requireAdmin, authMiddleware.requireCsrf] }, async (request, reply) => {
   try {
     const nextConfig = normalizeConfigForSave(request.body)
     await configStorage.save(nextConfig)
@@ -284,7 +284,7 @@ fastify.put('/config', { preHandler: [authMiddleware.authenticate, authMiddlewar
   }
 })
 
-fastify.post('/aws/discover-account', { preHandler: [authMiddleware.authenticate, authMiddleware.requireCsrf] }, async (request, reply) => {
+fastify.post('/aws/discover-account', { preHandler: [authMiddleware.authenticate, authMiddleware.requireAdmin, authMiddleware.requireCsrf] }, async (request, reply) => {
   try {
     const account = normalizeDiscoveryAccount(request.body)
     const discoveredAccount = await awsDiscoveryService.discoverAccount(account)
@@ -295,7 +295,7 @@ fastify.post('/aws/discover-account', { preHandler: [authMiddleware.authenticate
   }
 })
 
-fastify.post('/aws/discover-ecs', { preHandler: [authMiddleware.authenticate, authMiddleware.requireCsrf] }, async (request, reply) => {
+fastify.post('/aws/discover-ecs', { preHandler: [authMiddleware.authenticate, authMiddleware.requireAdmin, authMiddleware.requireCsrf] }, async (request, reply) => {
   try {
     const account = normalizeDiscoveryAccount(request.body)
     const clusters = await awsDiscoveryService.discoverEcs(account)
@@ -306,7 +306,7 @@ fastify.post('/aws/discover-ecs', { preHandler: [authMiddleware.authenticate, au
   }
 })
 
-fastify.post('/aws/discover-rds', { preHandler: [authMiddleware.authenticate, authMiddleware.requireCsrf] }, async (request, reply) => {
+fastify.post('/aws/discover-rds', { preHandler: [authMiddleware.authenticate, authMiddleware.requireAdmin, authMiddleware.requireCsrf] }, async (request, reply) => {
   try {
     const account = normalizeDiscoveryAccount(request.body)
     const clusters = await awsDiscoveryService.discoverRds(account)
@@ -424,7 +424,7 @@ fastify.post('/start-manual-mode', { preHandler: [authMiddleware.authenticate, a
 })
 
 // マニュアルモード解除
-fastify.post('/cancel-manual-mode', { preHandler: [authMiddleware.authenticate, authMiddleware.requireCsrf] }, async (_request, reply) => {
+fastify.post('/cancel-manual-mode', { preHandler: [authMiddleware.authenticate, authMiddleware.requireAdmin, authMiddleware.requireCsrf] }, async (_request, reply) => {
   try {
     const result = await manualModeController.cancelManualMode()
 

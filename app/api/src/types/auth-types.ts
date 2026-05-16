@@ -7,6 +7,7 @@ export interface User {
 
 export interface AuthUser {
   username: string
+  isAdmin: boolean
 }
 
 export interface TokenData {

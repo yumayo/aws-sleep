@@ -3,6 +3,7 @@ import { fetchWithCsrf } from '../api-client'
 
 interface User {
   username: string
+  isAdmin: boolean
 }
 
 interface Auth {

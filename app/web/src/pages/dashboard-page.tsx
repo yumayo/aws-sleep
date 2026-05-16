@@ -67,11 +67,12 @@ interface NextScheduleExecutionResponse {
 }
 
 interface DashboardPageProps {
-  user: { username: string }
+  user: { username: string, isAdmin: boolean }
   logout: () => void
 }
 
 export function DashboardPage({ user, logout }: DashboardPageProps) {
+  const isAdmin = user.isAdmin
   const [ecsServices, setEcsServices] = useState<EcsService[]>([])
   const [rdsClusters, setRdsClusters] = useState<RdsCluster[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -407,7 +408,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
         </div>
       </section>
 
-      <ConfigEditor onConfigSaved={fetchStatus} />
+      {isAdmin && <ConfigEditor onConfigSaved={fetchStatus} />}
 
       <section>
         <div style={{ backgroundColor: '#ffffcc', padding: '10px', margin: '10px 0', border: '2px solid #cccc00', borderRadius: '4px' }}>
@@ -504,11 +505,13 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
               サーバーを停止する
             </button>
           </div>
-          <div>
-            <button onClick={cancelManualMode} disabled={operationLoading || !manualModeStatus?.isActive}>
-              マニュアルモードを解除する
-            </button>
-          </div>
+          {isAdmin && (
+            <div>
+              <button onClick={cancelManualMode} disabled={operationLoading || !manualModeStatus?.isActive}>
+                マニュアルモードを解除する
+              </button>
+            </div>
+          )}
         </div>
       </section>
 

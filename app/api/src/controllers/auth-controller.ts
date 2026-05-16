@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { UserStorage } from '../models/auth/user-storage.js'
 import { AuthMiddleware } from '../middleware/auth-middleware.js'
 import { JwtUtil, TokenPayload } from '../models/auth/jwt-util.js'
+import { isAdminUsername } from '../models/auth/admin-user.js'
 
 export class AuthController {
   constructor(
@@ -42,6 +43,7 @@ export class AuthController {
 
       const token = this.jwtUtil.generateToken(tokenPayload)
       const csrfToken = randomBytes(32).toString('base64url')
+      const isAdmin = isAdminUsername(username)
       console.log('JWT生成完了:', {
         username,
         tokenPrefix: token.substring(0, 10) + '...',
@@ -74,7 +76,7 @@ export class AuthController {
 
       return reply.send({
         success: true,
-        user: { username }
+        user: { username, isAdmin }
       })
     } catch (error) {
       console.error('ログインエラー:', error)
