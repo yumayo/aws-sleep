@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import type { CSSProperties } from 'react'
 import { ConfigEditor } from '../components/config-editor'
 import { fetchWithCsrf } from '../api-client'
 
@@ -38,6 +39,22 @@ interface EcsStatusResponse {
 interface RdsStatusResponse {
   status: string
   clusters: RdsCluster[]
+}
+
+interface ResourceStatus {
+  resourceType: 'ECS' | 'RDS'
+  accountId: string
+  accountName: string
+  groupName: string
+  clusterName: string
+  serviceName: string
+  desiredCount: number | ''
+  runningCount: number | ''
+  pendingCount: number | ''
+  status: string
+  startDate: string
+  stopDate: string
+  scheduleState: ScheduleState
 }
 
 interface ResourceGroup {
@@ -342,6 +359,78 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       .join(', ')
   }
 
+  const resourceStatuses = [
+    ...ecsServices.map<ResourceStatus>(service => ({
+      resourceType: 'ECS',
+      accountId: service.accountId,
+      accountName: service.accountName,
+      groupName: service.groupName,
+      clusterName: service.clusterName,
+      serviceName: service.serviceName,
+      desiredCount: service.desiredCount,
+      runningCount: service.runningCount,
+      pendingCount: service.pendingCount,
+      status: service.status,
+      startDate: service.startDate,
+      stopDate: service.stopDate,
+      scheduleState: service.scheduleState
+    })),
+    ...rdsClusters.map<ResourceStatus>(cluster => ({
+      resourceType: 'RDS',
+      accountId: cluster.accountId,
+      accountName: cluster.accountName,
+      groupName: cluster.groupName,
+      clusterName: cluster.clusterName,
+      serviceName: '',
+      desiredCount: '',
+      runningCount: '',
+      pendingCount: '',
+      status: cluster.clusterStatus,
+      startDate: cluster.startDate,
+      stopDate: cluster.stopDate,
+      scheduleState: cluster.scheduleState
+    }))
+  ].sort((a, b) => (
+    a.groupName.localeCompare(b.groupName)
+    || a.resourceType.localeCompare(b.resourceType)
+    || a.accountName.localeCompare(b.accountName)
+    || a.clusterName.localeCompare(b.clusterName)
+    || a.serviceName.localeCompare(b.serviceName)
+  ))
+
+  const resourceStatusGroups = Array.from(
+    resourceStatuses.reduce((groups, resource) => {
+      const groupedResources = groups.get(resource.groupName)
+      if (groupedResources) {
+        groupedResources.push(resource)
+      } else {
+        groups.set(resource.groupName, [resource])
+      }
+      return groups
+    }, new Map<string, ResourceStatus[]>()).entries()
+  ).map(([groupName, resources]) => ({ groupName, resources }))
+
+  const inactiveScheduleStyle: CSSProperties = manualModeStatus?.isActive
+    ? { textDecoration: 'line-through', color: '#000' }
+    : {}
+
+  const renderScheduleCells = (resource: ResourceStatus) => (
+    <>
+      <td style={inactiveScheduleStyle}>❌️</td>
+      <td style={inactiveScheduleStyle}>✅</td>
+      <td style={inactiveScheduleStyle}>✅</td>
+      <td style={inactiveScheduleStyle}>✅</td>
+      <td style={inactiveScheduleStyle}>✅</td>
+      <td style={inactiveScheduleStyle}>✅</td>
+      <td style={inactiveScheduleStyle}>❌️</td>
+      <td style={inactiveScheduleStyle}>❌️</td>
+      <td style={inactiveScheduleStyle}>{resource.startDate || '-'}</td>
+      <td style={inactiveScheduleStyle}>{resource.stopDate || '-'}</td>
+      <td><strong style={inactiveScheduleStyle}>{resource.scheduleState}</strong></td>
+      <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#000' }}>{getManualModeStateForGroup(resource.groupName) || '-'}</strong></td>
+    </>
+  )
+
   useEffect(() => {
     fetchStatus()
     const interval = setInterval(fetchStatus, 3000)
@@ -517,118 +606,56 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
 
       <section>
         <div style={{ backgroundColor: '#f0f8ff', padding: '15px', margin: '10px 0', border: '2px solid #4169e1', borderRadius: '4px' }}>
-          <h2>ECS サービス状態</h2>
-          {ecsServices.length === 0 ? (
-            <p style={{ color: '#666', fontStyle: 'italic' }}>ECSサービス情報を取得中...</p>
+          <h2>リソース状態（グループ別）</h2>
+          {resourceStatusGroups.length === 0 ? (
+            <p style={{ color: '#666', fontStyle: 'italic' }}>リソース情報を取得中...</p>
           ) : (
-            <table border={1}>
-              <thead>
-                <tr>
-                  <th>アカウント</th>
-                  <th>グループ</th>
-                  <th>クラスター名</th>
-                  <th>サービス名</th>
-                  <th>希望台数</th>
-                  <th>実行中</th>
-                  <th>開始中</th>
-                  <th>状態</th>
-                  <th>日</th>
-                  <th>月</th>
-                  <th>火</th>
-                  <th>水</th>
-                  <th>木</th>
-                  <th>金</th>
-                  <th>土</th>
-                  <th>祝</th>
-                  <th>開始時刻</th>
-                  <th>停止時刻</th>
-                  <th>スケジュール状態</th>
-                  <th>マニュアルモード状態</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ecsServices.map((service, index) => {
-                  return (
-                    <tr key={index}>
-                      <td>{service.accountName}</td>
-                      <td>{service.groupName}</td>
-                      <td>{service.clusterName}</td>
-                      <td>{service.serviceName}</td>
-                      <td>{service.desiredCount}</td>
-                      <td>{service.runningCount}</td>
-                      <td>{service.pendingCount}</td>
-                      <td>{service.status}</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{service.startDate || '-'}</td>
-                      <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{service.stopDate || '-'}</td>
-                      <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{service.scheduleState}</strong></td>
-                      <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#000' }}>{getManualModeStateForGroup(service.groupName) || '-'}</strong></td>
+            resourceStatusGroups.map(group => (
+              <div key={group.groupName} style={{ marginTop: '12px' }}>
+                <h3 style={{ margin: '0 0 8px 0' }}>グループ: {group.groupName}</h3>
+                <table border={1}>
+                  <thead>
+                    <tr>
+                      <th>アカウント</th>
+                      <th>種別</th>
+                      <th>クラスター名</th>
+                      <th>サービス名</th>
+                      <th>希望台数</th>
+                      <th>実行中</th>
+                      <th>開始中</th>
+                      <th>状態</th>
+                      <th>日</th>
+                      <th>月</th>
+                      <th>火</th>
+                      <th>水</th>
+                      <th>木</th>
+                      <th>金</th>
+                      <th>土</th>
+                      <th>祝</th>
+                      <th>開始時刻</th>
+                      <th>停止時刻</th>
+                      <th>スケジュール状態</th>
+                      <th>マニュアルモード状態</th>
                     </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </section>
-
-      <section>
-        <div style={{ backgroundColor: '#f0fff0', padding: '15px', margin: '10px 0', border: '2px solid #32cd32', borderRadius: '4px' }}>
-          <h2>RDS クラスター状態</h2>
-          {rdsClusters.length === 0 ? (
-            <p style={{ color: '#666', fontStyle: 'italic' }}>RDSクラスター情報を取得中...</p>
-          ) : (
-            <table border={1}>
-              <thead>
-                <tr>
-                  <th>アカウント</th>
-                  <th>グループ</th>
-                  <th>クラスター名</th>
-                  <th>状態</th>
-                  <th>日</th>
-                  <th>月</th>
-                  <th>火</th>
-                  <th>水</th>
-                  <th>木</th>
-                  <th>金</th>
-                  <th>土</th>
-                  <th>祝</th>
-                  <th>開始時刻</th>
-                  <th>停止時刻</th>
-                  <th>スケジュール状態</th>
-                  <th>マニュアルモード状態</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rdsClusters.map((cluster, index) => (
-                  <tr key={index}>
-                    <td>{cluster.accountName}</td>
-                    <td>{cluster.groupName}</td>
-                    <td>{cluster.clusterName}</td>
-                    <td>{cluster.clusterStatus}</td>
-                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
-                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
-                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
-                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.startDate || '-'}</td>
-                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.stopDate || '-'}</td>
-                    <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.scheduleState}</strong></td>
-                    <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#000' }}>{getManualModeStateForGroup(cluster.groupName) || '-'}</strong></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {group.resources.map(resource => (
+                      <tr key={`${resource.resourceType}/${resource.accountId}/${resource.groupName}/${resource.clusterName}/${resource.serviceName}`}>
+                        <td>{resource.accountName}</td>
+                        <td>{resource.resourceType}</td>
+                        <td>{resource.clusterName}</td>
+                        <td>{resource.serviceName}</td>
+                        <td>{resource.desiredCount}</td>
+                        <td>{resource.runningCount}</td>
+                        <td>{resource.pendingCount}</td>
+                        <td>{resource.status}</td>
+                        {renderScheduleCells(resource)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))
           )}
         </div>
       </section>
