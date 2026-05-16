@@ -1,4 +1,5 @@
 import { Schedule, ScheduleAction, ScheduleState, ScheduleConfigRdsItem } from "../../types/scheduler-types"
+import { DEFAULT_GROUP_NAME } from "../config/config-storage"
 import { RdsService } from "./rds-service"
 
 export class RdsScheduleAction implements ScheduleAction {
@@ -12,6 +13,10 @@ export class RdsScheduleAction implements ScheduleAction {
 
   getSchedule(): Schedule {
     return this.config
+  }
+
+  getGroupName(): string {
+    return this.config.groupName ?? DEFAULT_GROUP_NAME
   }
 
   async invoke(state: ScheduleState): Promise<void> {

@@ -2,6 +2,7 @@ export type ScheduleState = 'active' | 'stop'
 
 export interface ScheduleAction {
   getSchedule: () => Schedule
+  getGroupName: () => string
   invoke: (state: ScheduleState) => Promise<void>
 }
 
@@ -11,6 +12,8 @@ export interface Schedule {
 }
 
 export interface ScheduleConfigEcsItem {
+  accountId?: string
+  groupName?: string
   clusterName: string
   serviceName: string
   desiredCount: number
@@ -19,9 +22,18 @@ export interface ScheduleConfigEcsItem {
 }
 
 export interface ScheduleConfigRdsItem {
+  accountId?: string
+  groupName?: string
   clusterName: string
   startDate: string
   stopDate: string
+}
+
+export interface AwsAccountConfig {
+  accountId: string
+  accountName?: string
+  awsRegion?: string
+  credentialProfile?: string
 }
 
 export interface Config {
@@ -29,6 +41,12 @@ export interface Config {
   rdsItems: ScheduleConfigRdsItem[]
   awsRegion: string
   delayHour: number
+  awsAccounts?: AwsAccountConfig[]
+}
+
+export interface ResourceGroup {
+  groupName: string
+  resourceCount: number
 }
 
 export interface EcsDesiredCountData {
@@ -40,4 +58,5 @@ export interface ManualModeData {
   scheduledTime?: Date
   requester?: string
   scheduleState: ScheduleState
+  groupStates?: Record<string, ScheduleState>
 }

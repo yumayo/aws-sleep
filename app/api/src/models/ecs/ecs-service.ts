@@ -1,33 +1,25 @@
 import { ECSClient, UpdateServiceCommand, DescribeServicesCommand } from '@aws-sdk/client-ecs'
-import { ConfigStorage } from '../config/config-storage'
 
 export class EcsService {
   private readonly client: ECSClient
-  private readonly configStorage: ConfigStorage
+  private readonly accountId: string
 
-  constructor(ecsClient: ECSClient, configStorage: ConfigStorage) {
+  constructor(ecsClient: ECSClient, accountId: string) {
     this.client = ecsClient
-    this.configStorage = configStorage
+    this.accountId = accountId
   }
 
-  async startService(clusterName: string, serviceName: string): Promise<void> {
-    // configから初期値を取得
-    const desiredCount = await this.configStorage.getDesiredCount(clusterName, serviceName)
-    
-    if (desiredCount === null) {
-      console.log(`Skipping start for ${clusterName}/${serviceName}: no desired count available`)
-      return
-    }
+  async startService(clusterName: string, serviceName: string, desiredCount: number): Promise<void> {
     if (desiredCount === 0) {
-      console.log(`Skipping start for ${clusterName}/${serviceName}: zero desired count`)
+      console.log(`Skipping start for [${this.accountId}] ${clusterName}/${serviceName}: zero desired count`)
       return
     }
-    console.log(`Starting ECS service: ${serviceName} with ${desiredCount} tasks`)
+    console.log(`Starting ECS service: [${this.accountId}] ${serviceName} with ${desiredCount} tasks`)
     await this.updateServiceDesiredCount(clusterName, serviceName, desiredCount)
   }
 
   async stopService(clusterName: string, serviceName: string): Promise<void> {
-    console.log(`Stopping ECS service: ${serviceName}`)
+    console.log(`Stopping ECS service: [${this.accountId}] ${serviceName}`)
     await this.updateServiceDesiredCount(clusterName, serviceName, 0)
   }
 
@@ -47,7 +39,7 @@ export class EcsService {
       const service = response.services?.[0]
       
       if (!service) {
-        throw new Error(`Service ${serviceName} not found in cluster ${clusterName}`)
+        throw new Error(`Service ${serviceName} not found in cluster ${clusterName} for account ${this.accountId}`)
       }
 
       return {
@@ -57,7 +49,7 @@ export class EcsService {
         status: service.status || 'UNKNOWN'
       }
     } catch (error) {
-      console.error(`Failed to get ECS service ${serviceName} status:`, error)
+      console.error(`Failed to get ECS service [${this.accountId}] ${serviceName} status:`, error)
       throw error
     }
   }
@@ -67,7 +59,7 @@ export class EcsService {
       const serviceStatus = await this.getServiceStatus(clusterName, serviceName)
 
       if (serviceStatus.desiredCount === desiredCount) {
-        console.log(`ECS Service ${serviceName} already has desired count ${desiredCount}, skipping update`)
+        console.log(`ECS Service [${this.accountId}] ${serviceName} already has desired count ${desiredCount}, skipping update`)
         return
       }
 
@@ -78,9 +70,9 @@ export class EcsService {
       })
 
       const response = await this.client.send(command)
-      console.log(`ECS Service ${serviceName} updated: desired count = ${desiredCount}`, response.service?.status)
+      console.log(`ECS Service [${this.accountId}] ${serviceName} updated: desired count = ${desiredCount}`, response.service?.status)
     } catch (error) {
-      console.error(`Failed to update ECS service ${serviceName}:`, error)
+      console.error(`Failed to update ECS service [${this.accountId}] ${serviceName}:`, error)
       throw error
     }
   }

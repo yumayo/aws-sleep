@@ -3,6 +3,9 @@ import { useState, useEffect } from 'react'
 type ScheduleState = 'active' | 'stop'
 
 interface EcsService {
+  accountId: string
+  accountName: string
+  groupName: string
   clusterName: string
   serviceName: string
   desiredCount: number
@@ -20,6 +23,9 @@ interface RdsInstance {
 }
 
 interface RdsCluster {
+  accountId: string
+  accountName: string
+  groupName: string
   clusterName: string
   clusterStatus: string
   instances: RdsInstance[]
@@ -38,6 +44,16 @@ interface RdsStatusResponse {
   clusters: RdsCluster[]
 }
 
+interface ResourceGroup {
+  groupName: string
+  resourceCount: number
+}
+
+interface ResourceGroupsResponse {
+  status: string
+  groups: ResourceGroup[]
+}
+
 interface ManualModeStatusResponse {
   status: string
   isActive: boolean
@@ -45,6 +61,7 @@ interface ManualModeStatusResponse {
   requestedAt?: string
   scheduledStopAt?: string
   manualScheduleState?: ScheduleState
+  manualGroupStates?: Record<string, ScheduleState>
 }
 
 interface NextScheduleExecutionResponse {
@@ -65,10 +82,12 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
   const [apiError, setApiError] = useState<string | null>(null)
   const [operationLoading, setOperationLoading] = useState(false)
   const [manualModeStatus, setManualModeStatus] = useState<ManualModeStatusResponse | null>(null)
+  const [resourceGroups, setResourceGroups] = useState<ResourceGroup[]>([])
   const [showManualModeForm, setShowManualModeForm] = useState(false)
   const [manualModeFormData, setManualModeFormData] = useState({
     scheduledDate: '',
-    isIndefinite: false
+    isIndefinite: false,
+    groupStates: {} as Record<string, ScheduleState>
   })
   const [lastScheduleExecution, setLastScheduleExecution] = useState<string | null>(null)
   const [nextScheduleExecution, setNextScheduleExecution] = useState<string | null>(null)
@@ -77,11 +96,12 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     try {
       setError(null)
 
-      const [ecsResponse, rdsResponse, manualModeStatusResponse, nextScheduleResponse] = await Promise.all([
+      const [ecsResponse, rdsResponse, manualModeStatusResponse, nextScheduleResponse, resourceGroupsResponse] = await Promise.all([
         fetch('/server-monitoring-api/ecs/status'),
         fetch('/server-monitoring-api/rds/status'),
         fetch('/server-monitoring-api/manual-mode-status'),
-        fetch('/server-monitoring-api/next-schedule-execution')
+        fetch('/server-monitoring-api/next-schedule-execution'),
+        fetch('/server-monitoring-api/resource-groups')
       ])
 
       const errorDetails = []
@@ -119,6 +139,14 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
         errorDetails.push(`Next Schedule API (${nextScheduleResponse.status}): ${errorText}`)
       }
 
+      if (resourceGroupsResponse.ok) {
+        const resourceGroupsData: ResourceGroupsResponse = await resourceGroupsResponse.json()
+        setResourceGroups(resourceGroupsData.groups)
+      } else {
+        const errorText = await resourceGroupsResponse.text()
+        errorDetails.push(`Resource Groups API (${resourceGroupsResponse.status}): ${errorText}`)
+      }
+
       if (errorDetails.length > 0) {
         setApiError(`APIサーバーエラーが発生しました:\n\n${errorDetails.join('\n\n')}`)
       } else {
@@ -142,7 +170,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
 
     setManualModeFormData({
       scheduledDate: defaultTimeString,
-      isIndefinite: false
+      isIndefinite: false,
+      groupStates: Object.fromEntries(resourceGroups.map(group => [group.groupName, 'active' as ScheduleState]))
     })
     setShowManualModeForm(true)
   }
@@ -166,9 +195,24 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       }
     }
 
+    const activeGroupNames = resourceGroups
+      .filter(group => manualModeFormData.groupStates[group.groupName] === 'active')
+      .map(group => group.groupName)
+    const stopGroupNames = resourceGroups
+      .filter(group => manualModeFormData.groupStates[group.groupName] !== 'active')
+      .map(group => group.groupName)
+
+    if (resourceGroups.length > 0 && activeGroupNames.length === 0) {
+      alert('起動するグループを1つ以上選択してください')
+      return
+    }
+
+    const groupMessage = resourceGroups.length > 0
+      ? `\n起動するグループ: ${activeGroupNames.join(', ')}\n起動しないグループ: ${stopGroupNames.length > 0 ? stopGroupNames.join(', ') : '-'}`
+      : ''
     const confirmMessage = manualModeFormData.isIndefinite
-      ? `無期限起動申請を行いますか？\n起動申請を行うとサーバーが起動され、手動で解除するまで起動状態を維持します。`
-      : `${scheduledDate!.toLocaleString('ja-JP')} まで起動申請を行いますか？\n起動申請を行うとサーバーが起動され、指定した時刻まで起動状態を維持します。`
+      ? `無期限起動申請を行いますか？\n起動申請を行うと選択したグループが起動され、手動で解除するまで選択した状態を維持します。${groupMessage}`
+      : `${scheduledDate!.toLocaleString('ja-JP')} まで起動申請を行いますか？\n起動申請を行うと選択したグループが起動され、指定した時刻まで選択した状態を維持します。${groupMessage}`
     if (!confirm(confirmMessage)) {
       return
     }
@@ -184,7 +228,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
         },
         body: JSON.stringify({
           scheduledDate: scheduledDate ? scheduledDate.toISOString() : null,
-          scheduleState: 'active'
+          scheduleState: 'active',
+          groupStates: manualModeFormData.groupStates
         })
       })
 
@@ -238,7 +283,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
 
   const cancelManualModeForm = () => {
     setShowManualModeForm(false)
-    setManualModeFormData({ scheduledDate: '', isIndefinite: false })
+    setManualModeFormData({ scheduledDate: '', isIndefinite: false, groupStates: {} })
   }
 
   const cancelManualMode = async () => {
@@ -268,8 +313,36 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     }
   }
 
-  const handleManualModeFormDataChange = (field: keyof typeof manualModeFormData, value: string | boolean) => {
+  const handleManualModeFormDataChange = (field: 'scheduledDate' | 'isIndefinite', value: string | boolean) => {
     setManualModeFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleManualGroupStateChange = (groupName: string, shouldStart: boolean) => {
+    setManualModeFormData(prev => ({
+      ...prev,
+      groupStates: {
+        ...prev.groupStates,
+        [groupName]: shouldStart ? 'active' : 'stop'
+      }
+    }))
+  }
+
+  const getManualModeStateForGroup = (groupName: string): ScheduleState | undefined => {
+    if (!manualModeStatus?.isActive) {
+      return undefined
+    }
+
+    return manualModeStatus.manualGroupStates?.[groupName] ?? manualModeStatus.manualScheduleState
+  }
+
+  const formatManualGroupStates = (groupStates?: Record<string, ScheduleState>): string => {
+    if (!groupStates) {
+      return '-'
+    }
+
+    return Object.entries(groupStates)
+      .map(([groupName, state]) => `${groupName}: ${state}`)
+      .join(', ')
   }
 
   useEffect(() => {
@@ -353,6 +426,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                 <th>申請者</th>
                 <th>申請日時</th>
                 <th>解除予定日時</th>
+                <th>グループ状態</th>
               </tr>
             </thead>
             <tbody>
@@ -361,6 +435,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                 <td>{manualModeStatus?.requester || '-'}</td>
                 <td>{manualModeStatus?.requestedAt ? new Date(manualModeStatus.requestedAt).toLocaleString('ja-JP') : '-'}</td>
                 <td>{manualModeStatus?.scheduledStopAt ? new Date(manualModeStatus.scheduledStopAt).toLocaleString('ja-JP') : '-'}</td>
+                <td>{formatManualGroupStates(manualModeStatus?.manualGroupStates)}</td>
               </tr>
             </tbody>
           </table>
@@ -397,6 +472,24 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                     停止しない（手動解除まで起動状態を維持）
                   </label>
                 </div>
+                <fieldset style={{ marginBottom: '15px' }}>
+                  <legend>起動するグループ</legend>
+                  {resourceGroups.length === 0 ? (
+                    <p style={{ margin: '5px 0', color: '#666' }}>グループ情報を取得中...</p>
+                  ) : (
+                    resourceGroups.map(group => (
+                      <label key={group.groupName} style={{ display: 'block', margin: '6px 0' }}>
+                        <input
+                          type="checkbox"
+                          checked={manualModeFormData.groupStates[group.groupName] === 'active'}
+                          onChange={(e) => handleManualGroupStateChange(group.groupName, e.target.checked)}
+                          disabled={operationLoading}
+                        />
+                        {group.groupName}（{group.resourceCount}件）
+                      </label>
+                    ))
+                  )}
+                </fieldset>
                 <div>
                   <button type="submit" disabled={operationLoading} style={{ marginRight: '10px' }}>
                     申請する
@@ -430,6 +523,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
             <table border={1}>
               <thead>
                 <tr>
+                  <th>アカウント</th>
+                  <th>グループ</th>
                   <th>クラスター名</th>
                   <th>サービス名</th>
                   <th>希望台数</th>
@@ -454,6 +549,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                 {ecsServices.map((service, index) => {
                   return (
                     <tr key={index}>
+                      <td>{service.accountName}</td>
+                      <td>{service.groupName}</td>
                       <td>{service.clusterName}</td>
                       <td>{service.serviceName}</td>
                       <td>{service.desiredCount}</td>
@@ -471,7 +568,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                       <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{service.startDate || '-'}</td>
                       <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{service.stopDate || '-'}</td>
                       <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{service.scheduleState}</strong></td>
-                      <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#000' }}>{manualModeStatus?.isActive ? (manualModeStatus?.manualScheduleState || '-') : '-'}</strong></td>
+                      <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#000' }}>{getManualModeStateForGroup(service.groupName) || '-'}</strong></td>
                     </tr>
                   )
                 })}
@@ -490,6 +587,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
             <table border={1}>
               <thead>
                 <tr>
+                  <th>アカウント</th>
+                  <th>グループ</th>
                   <th>クラスター名</th>
                   <th>インスタンス名</th>
                   <th>状態</th>
@@ -512,6 +611,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                   return cluster.instances.map((instance, instanceIndex) => {
                     return (
                       <tr key={`${index}-${instanceIndex}`}>
+                        <td>{cluster.accountName}</td>
+                        <td>{cluster.groupName}</td>
                         <td>{cluster.clusterName}</td>
                         <td>{instance.instanceName}</td>
                         <td>{instance.status}</td>
@@ -526,7 +627,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                         <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.startDate || '-'}</td>
                         <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.stopDate || '-'}</td>
                         <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.scheduleState}</strong></td>
-                        <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#000' }}>{manualModeStatus?.isActive ? (manualModeStatus?.manualScheduleState || '-') : '-'}</strong></td>
+                        <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#000' }}>{getManualModeStateForGroup(cluster.groupName) || '-'}</strong></td>
                       </tr>
                     )
                   })

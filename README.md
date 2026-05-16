@@ -17,8 +17,23 @@ make setup
 
 ```json
 {
+  "awsAccounts": [
+    {
+      "accountId": "dev",
+      "accountName": "開発アカウント",
+      "awsRegion": "ap-northeast-1"
+    },
+    {
+      "accountId": "stg",
+      "accountName": "ステージングアカウント",
+      "awsRegion": "ap-northeast-1",
+      "credentialProfile": "aws-sleep-stg"
+    }
+  ],
   "ecsItems": [
     {
+      "accountId": "dev",
+      "groupName": "web",
       "clusterName": "sample-cluster",
       "serviceName": "sample-service-1",
       "desiredCount": 1,
@@ -26,6 +41,8 @@ make setup
       "stopDate": "21:00"
     },
     {
+      "accountId": "dev",
+      "groupName": "web",
       "clusterName": "sample-cluster",
       "serviceName": "sample-service-2",
       "desiredCount": 1,
@@ -33,6 +50,8 @@ make setup
       "stopDate": "21:00"
     },
     {
+      "accountId": "stg",
+      "groupName": "batch",
       "clusterName": "sample-cluster",
       "serviceName": "sample-service-3",
       "desiredCount": 1,
@@ -42,6 +61,8 @@ make setup
   ],
   "rdsItems": [
     {
+      "accountId": "dev",
+      "groupName": "web",
       "clusterName": "rds-aurora-sample-auroracluster-zoizerqxon9k",
       "startDate": "8:40",
       "stopDate": "21:00"
@@ -50,6 +71,12 @@ make setup
   "awsRegion": "ap-northeast-1"
 }
 ```
+
+`awsAccounts` を省略した場合は従来どおり `awsRegion` と実行環境のAWS認証情報を使用します。
+`awsAccounts` を複数設定する場合は、各 `ecsItems` / `rdsItems` に `accountId` を指定してください。
+`credentialProfile` を指定したアカウントはAWSプロファイルを使用します。未指定のアカウントは実行環境のAWS認証情報を使用します。
+
+`groupName` はマニュアルモードで起動する対象を選択するためのグループです。省略したリソースは `default` グループになります。マニュアルモードの起動申請では、グループごとに起動する/起動しないを選択できます。
 
 ## 動作確認
 

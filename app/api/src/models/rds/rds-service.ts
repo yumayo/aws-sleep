@@ -2,23 +2,25 @@ import { RDSClient, StartDBClusterCommand, StopDBClusterCommand, DescribeDBClust
 
 export class RdsService {
   private readonly client: RDSClient
+  private readonly accountId: string
 
-  constructor(rdsClient: RDSClient) {
+  constructor(rdsClient: RDSClient, accountId: string) {
     this.client = rdsClient
+    this.accountId = accountId
   }
 
   async startCluster(clusterName: string): Promise<void> {
-    console.log(`Starting RDS cluster: ${clusterName}`)
+    console.log(`Starting RDS cluster: [${this.accountId}] ${clusterName}`)
     try {
       const currentStatus = await this.getClusterStatus(clusterName)
 
       if (currentStatus === 'available') {
-        console.log(`RDS cluster ${clusterName} is already running (${currentStatus})`)
+        console.log(`RDS cluster [${this.accountId}] ${clusterName} is already running (${currentStatus})`)
         return
       }
 
       if (currentStatus !== 'stopped') {
-        console.log(`Skipping start for RDS cluster ${clusterName}: current status is ${currentStatus}`)
+        console.log(`Skipping start for RDS cluster [${this.accountId}] ${clusterName}: current status is ${currentStatus}`)
         return
       }
 
@@ -27,25 +29,25 @@ export class RdsService {
       })
 
       const response = await this.client.send(command)
-      console.log(`RDS Cluster ${clusterName} started:`, response.DBCluster?.Status)
+      console.log(`RDS Cluster [${this.accountId}] ${clusterName} started:`, response.DBCluster?.Status)
     } catch (error) {
-      console.error(`Failed to start RDS cluster ${clusterName}:`, error)
+      console.error(`Failed to start RDS cluster [${this.accountId}] ${clusterName}:`, error)
       throw error
     }
   }
 
   async stopCluster(clusterName: string): Promise<void> {
-    console.log(`Stopping RDS cluster: ${clusterName}`)
+    console.log(`Stopping RDS cluster: [${this.accountId}] ${clusterName}`)
     try {
       const currentStatus = await this.getClusterStatus(clusterName)
 
       if (currentStatus === 'stopped') {
-        console.log(`RDS cluster ${clusterName} is already stopped (${currentStatus})`)
+        console.log(`RDS cluster [${this.accountId}] ${clusterName} is already stopped (${currentStatus})`)
         return
       }
 
       if (currentStatus !== 'available') {
-        console.log(`Skipping stop for RDS cluster ${clusterName}: current status is ${currentStatus}`)
+        console.log(`Skipping stop for RDS cluster [${this.accountId}] ${clusterName}: current status is ${currentStatus}`)
         return
       }
 
@@ -54,9 +56,9 @@ export class RdsService {
       })
 
       const response = await this.client.send(command)
-      console.log(`RDS Cluster ${clusterName} stopped:`, response.DBCluster?.Status)
+      console.log(`RDS Cluster [${this.accountId}] ${clusterName} stopped:`, response.DBCluster?.Status)
     } catch (error) {
-      console.error(`Failed to stop RDS cluster ${clusterName}:`, error)
+      console.error(`Failed to stop RDS cluster [${this.accountId}] ${clusterName}:`, error)
       throw error
     }
   }
@@ -71,12 +73,12 @@ export class RdsService {
       const cluster = response.DBClusters?.[0]
 
       if (!cluster) {
-        throw new Error(`RDS cluster ${clusterName} not found`)
+        throw new Error(`RDS cluster ${clusterName} not found for account ${this.accountId}`)
       }
 
       return cluster.Status
     } catch (error) {
-      console.error(`Failed to get RDS cluster ${clusterName} info:`, error)
+      console.error(`Failed to get RDS cluster [${this.accountId}] ${clusterName} info:`, error)
       throw error
     }
   }
@@ -97,7 +99,7 @@ export class RdsService {
       const cluster = clusterResponse.DBClusters?.[0]
 
       if (!cluster) {
-        throw new Error(`RDS cluster ${clusterName} not found`)
+        throw new Error(`RDS cluster ${clusterName} not found for account ${this.accountId}`)
       }
 
       const instanceNames = cluster.DBClusterMembers?.map(member => member.DBInstanceIdentifier ?? '').filter(Boolean) || []
@@ -117,7 +119,7 @@ export class RdsService {
               status: instance?.DBInstanceStatus
             }
           } catch (error) {
-            console.error(`Failed to get instance ${instanceName} info:`, error)
+            console.error(`Failed to get instance [${this.accountId}] ${instanceName} info:`, error)
             return {
               instanceName,
               status: 'unknown'
@@ -131,7 +133,7 @@ export class RdsService {
         instances
       }
     } catch (error) {
-      console.error(`Failed to get RDS cluster ${clusterName} info:`, error)
+      console.error(`Failed to get RDS cluster [${this.accountId}] ${clusterName} info:`, error)
       throw error
     }
   }

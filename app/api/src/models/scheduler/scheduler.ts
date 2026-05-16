@@ -59,11 +59,7 @@ export class Scheduler {
       return
     }
 
-    if (!manualMode.scheduledTime) {
-      return
-    }
-
-    if (now >= manualMode.scheduledTime) {
+    if (manualMode.scheduledTime && now >= manualMode.scheduledTime) {
       await this.manualModeStorage.clear()
       console.log('Manual mode operation expired and cleared')
 
@@ -74,12 +70,14 @@ export class Scheduler {
 
       console.log(`Manual mode active - maintaining ${operationMode} state (requester: ${manualMode?.requester}, requested: ${requestedAt}, scheduled stop: ${scheduledStopAt})`)
 
-      // operationModeに応じて状態を維持
       for (const scheduleAction of this.scheduleActions) {
-        if (operationMode === 'active') {
-          await scheduleAction.invoke('active')
-        } else if (operationMode === 'stop') {
-          await scheduleAction.invoke('stop')
+        const groupName = scheduleAction.getGroupName()
+        const groupState = manualMode.groupStates?.[groupName] ?? operationMode
+
+        if (groupState === 'active' || groupState === 'stop') {
+          await scheduleAction.invoke(groupState)
+        } else {
+          console.error(`未定義のstateです。${groupState}`)
         }
       }
     }

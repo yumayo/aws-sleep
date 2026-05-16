@@ -1,4 +1,5 @@
 import { Schedule, ScheduleAction, ScheduleState, ScheduleConfigEcsItem } from "../../types/scheduler-types"
+import { DEFAULT_GROUP_NAME } from "../config/config-storage"
 import { EcsService } from "./ecs-service"
 
 export class EcsScheduleAction implements ScheduleAction {
@@ -14,9 +15,13 @@ export class EcsScheduleAction implements ScheduleAction {
     return this.config
   }
 
+  getGroupName(): string {
+    return this.config.groupName ?? DEFAULT_GROUP_NAME
+  }
+
   async invoke(state: ScheduleState): Promise<void> {
     if (state === 'active') {
-      await this.ecsService.startService(this.config.clusterName, this.config.serviceName)
+      await this.ecsService.startService(this.config.clusterName, this.config.serviceName, this.config.desiredCount)
     } else if (state === 'stop') {
       await this.ecsService.stopService(this.config.clusterName, this.config.serviceName)
     } else {

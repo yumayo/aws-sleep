@@ -1,8 +1,6 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import cookie from '@fastify/cookie'
-import { ECSClient } from '@aws-sdk/client-ecs'
-import { RDSClient } from '@aws-sdk/client-rds'
 import { getHealth } from './controllers/health-controller'
 import { ManualModeController } from './controllers/manual-mode-controller'
 import { AuthController } from './controllers/auth-controller'
@@ -14,6 +12,7 @@ import { AuthMiddleware } from './middleware/auth-middleware'
 import { JwtUtil } from './models/auth/jwt-util'
 import { EcsService } from './models/ecs/ecs-service'
 import { RdsService } from './models/rds/rds-service'
+import { AwsClientFactory } from './models/aws/aws-client-factory'
 import { Scheduler } from './models/scheduler/scheduler'
 import { EcsScheduleAction } from './models/ecs/ecs-schedule-action'
 import { RdsScheduleAction } from './models/rds/rds-schedule-action'
@@ -49,17 +48,76 @@ fastify.get('/auth/me', { preHandler: authMiddleware.authenticate }, authControl
 const configStorage = new ConfigStorage()
 const config = await configStorage.load()
 
-const ecsClient = new ECSClient({region: config.awsRegion})
-const rdsClient = new RDSClient({region: config.awsRegion})
-const ecsService = new EcsService(ecsClient, configStorage)
-const rdsService = new RdsService(rdsClient)
+const awsAccounts = configStorage.getAwsAccounts(config)
+const awsClientFactory = new AwsClientFactory(awsAccounts)
+const ecsServices = new Map<string, EcsService>()
+const rdsServices = new Map<string, RdsService>()
+const getEcsService = (accountId: string): EcsService => {
+  const cachedService = ecsServices.get(accountId)
+  if (cachedService) {
+    return cachedService
+  }
+
+  const service = new EcsService(awsClientFactory.getEcsClient(accountId), accountId)
+  ecsServices.set(accountId, service)
+  return service
+}
+const getRdsService = (accountId: string): RdsService => {
+  const cachedService = rdsServices.get(accountId)
+  if (cachedService) {
+    return cachedService
+  }
+
+  const service = new RdsService(awsClientFactory.getRdsClient(accountId), accountId)
+  rdsServices.set(accountId, service)
+  return service
+}
+const getAccountName = (accountId: string): string => {
+  const account = awsAccounts.find(account => account.accountId === accountId)
+  return account?.accountName ?? accountId
+}
 const manualModeStorage = new ManualModeStorage()
 const manualModeController = new ManualModeController(manualModeStorage)
-const ecsScheduleActions = config.ecsItems.map((x) => new EcsScheduleAction(ecsService, x))
-const rdsScheduleActions = config.rdsItems.map((x) => new RdsScheduleAction(rdsService, x))
+const ecsScheduleActions = config.ecsItems.map((x) => new EcsScheduleAction(getEcsService(configStorage.getItemAccountId(config, x)), x))
+const rdsScheduleActions = config.rdsItems.map((x) => new RdsScheduleAction(getRdsService(configStorage.getItemAccountId(config, x)), x))
 const allScheduleActions = [...ecsScheduleActions, ...rdsScheduleActions]
 const scheduler = new Scheduler(allScheduleActions, manualModeStorage)
 const schedulerController = new SchedulerController(scheduler)
+
+const isScheduleState = (value: unknown): value is ScheduleState => value === 'active' || value === 'stop'
+
+const normalizeManualGroupStates = (scheduleState: ScheduleState, groupStates: unknown): Record<string, ScheduleState> | undefined => {
+  if (groupStates === undefined || groupStates === null) {
+    return undefined
+  }
+
+  if (typeof groupStates !== 'object' || Array.isArray(groupStates)) {
+    throw new Error('groupStates must be an object')
+  }
+
+  const configGroups = configStorage.getResourceGroups(config)
+  const knownGroupNames = new Set(configGroups.map(group => group.groupName))
+  const rawGroupStates = groupStates as Record<string, unknown>
+
+  for (const groupName of Object.keys(rawGroupStates)) {
+    if (!knownGroupNames.has(groupName)) {
+      throw new Error(`Unknown manual mode group: ${groupName}`)
+    }
+
+    if (!isScheduleState(rawGroupStates[groupName])) {
+      throw new Error(`Manual mode group ${groupName} must be active or stop`)
+    }
+  }
+
+  const defaultStateForMissingGroup: ScheduleState = scheduleState === 'active' ? 'stop' : scheduleState
+
+  return Object.fromEntries(
+    configGroups.map(group => {
+      const groupState = rawGroupStates[group.groupName]
+      return [group.groupName, isScheduleState(groupState) ? groupState : defaultStateForMissingGroup]
+    })
+  )
+}
 
 fastify.get('/ecs/status', { preHandler: authMiddleware.authenticate }, async (_request, reply) => {
   try {
@@ -67,13 +125,18 @@ fastify.get('/ecs/status', { preHandler: authMiddleware.authenticate }, async (_
     const now = new Date()
     const statusList = await Promise.all(
       config.ecsItems.map(async (ecs) => {
-        const serviceStatus = await ecsService.getServiceStatus(ecs.clusterName, ecs.serviceName)
+        const accountId = configStorage.getItemAccountId(config, ecs)
+        const groupName = configStorage.getItemGroupName(ecs)
+        const serviceStatus = await getEcsService(accountId).getServiceStatus(ecs.clusterName, ecs.serviceName)
         const schedule = {
           startDate: ecs.startDate,
           stopDate: ecs.stopDate
         }
         const scheduleState = calculateScheduleState(schedule, now)
         return {
+          accountId,
+          accountName: getAccountName(accountId),
+          groupName,
           clusterName: ecs.clusterName,
           serviceName: ecs.serviceName,
           desiredCount: serviceStatus.desiredCount,
@@ -99,13 +162,18 @@ fastify.get('/rds/status', { preHandler: authMiddleware.authenticate }, async (_
     const now = new Date()
     const statusList = await Promise.all(
       config.rdsItems.map(async (rds) => {
-        const clusterInfo = await rdsService.getClusterInfo(rds.clusterName)
+        const accountId = configStorage.getItemAccountId(config, rds)
+        const groupName = configStorage.getItemGroupName(rds)
+        const clusterInfo = await getRdsService(accountId).getClusterInfo(rds.clusterName)
         const schedule = {
           startDate: rds.startDate,
           stopDate: rds.stopDate
         }
         const scheduleState = calculateScheduleState(schedule, now)
         return {
+          accountId,
+          accountName: getAccountName(accountId),
+          groupName,
           clusterName: rds.clusterName,
           clusterStatus: clusterInfo.clusterStatus,
           instances: clusterInfo.instances,
@@ -122,14 +190,32 @@ fastify.get('/rds/status', { preHandler: authMiddleware.authenticate }, async (_
   }
 })
 
+fastify.get('/resource-groups', { preHandler: authMiddleware.authenticate }, async (_request, reply) => {
+  try {
+    const config = await configStorage.load()
+    return { status: 'success', groups: configStorage.getResourceGroups(config) }
+  } catch (error) {
+    reply.code(500)
+    return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
+  }
+})
+
 fastify.post('/start-manual-mode', { preHandler: authMiddleware.authenticate }, async (request, _reply) => {
   try {
-    const body = request.body as { scheduledDate?: string, scheduleState: ScheduleState }
+    const body = request.body as { scheduledDate?: string | null, scheduleState?: unknown, groupStates?: unknown }
+
+    if (!isScheduleState(body.scheduleState)) {
+      _reply.code(400)
+      return { status: 'error', message: 'scheduleState must be active or stop' }
+    }
+
+    const groupStates = normalizeManualGroupStates(body.scheduleState, body.groupStates)
 
     const result = await manualModeController.startManualMode(
       request.user!.username,
       body.scheduledDate ? new Date(body.scheduledDate) : undefined,
-      body.scheduleState
+      body.scheduleState,
+      groupStates
     )
 
     if (!result.success) {
@@ -138,7 +224,7 @@ fastify.post('/start-manual-mode', { preHandler: authMiddleware.authenticate }, 
 
     return result
   } catch (error) {
-    _reply.code(500)
+    _reply.code(400)
     return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
   }
 })

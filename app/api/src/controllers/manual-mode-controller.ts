@@ -8,7 +8,7 @@ export class ManualModeController {
     this.manualModeStorage = manualModeStorage
   }
 
-  async startManualMode(requester: string, scheduledTime: Date | undefined, scheduleState: ScheduleState): Promise<{
+  async startManualMode(requester: string, scheduledTime: Date | undefined, scheduleState: ScheduleState, groupStates?: Record<string, ScheduleState>): Promise<{
     success: boolean,
     message: string,
     scheduledTime?: Date,
@@ -35,7 +35,8 @@ export class ManualModeController {
       requestTime: now,
       scheduledTime,
       requester,
-      scheduleState: scheduleState
+      scheduleState: scheduleState,
+      groupStates
     }
 
     // データを保存
@@ -96,7 +97,8 @@ export class ManualModeController {
     requestedAt?: Date,
     scheduledStopAt?: Date,
     requester?: string,
-    manualScheduleState?: ScheduleState
+    manualScheduleState?: ScheduleState,
+    manualGroupStates?: Record<string, ScheduleState>
   }> {
     const operationData = await this.manualModeStorage.load()
 
@@ -111,7 +113,8 @@ export class ManualModeController {
       requestedAt: operationData.requestTime,
       scheduledStopAt: operationData.scheduledTime,
       requester: operationData.requester,
-      manualScheduleState: operationData.scheduleState
+      manualScheduleState: operationData.scheduleState,
+      manualGroupStates: operationData.groupStates
     }
   }
 
