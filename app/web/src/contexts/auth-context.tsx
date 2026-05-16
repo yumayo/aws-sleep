@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { fetchWithCsrf } from '../api-client'
 
 interface User {
   username: string
@@ -67,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode } ) {
 
   const logout = async (): Promise<void> => {
     try {
-      await fetch('/server-monitoring-api/auth/logout', {
+      await fetchWithCsrf('/server-monitoring-api/auth/logout', {
         method: 'POST',
       })
     } catch (err) {

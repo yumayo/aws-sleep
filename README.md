@@ -13,7 +13,10 @@ make setup
 
 ## 2. 夜間、休日停止する設定を行う
 
-下記のような設定をしたjsonファイルを app/api/data/config.json に置く。
+ログイン後の `config.json 設定` から、AWSアカウント、ECSサービス、RDSクラスターを設定できます。
+AWSアカウント情報はAWS APIから取得でき、ECSはクラスターと配下サービス、RDSはクラスターを取り込めます。
+
+直接編集する場合は、下記のような設定をしたjsonファイルを app/api/data/config.json に置く。
 
 ```json
 {
@@ -28,6 +31,19 @@ make setup
       "accountName": "ステージングアカウント",
       "awsRegion": "ap-northeast-1",
       "credentialProfile": "aws-sleep-stg"
+    },
+    {
+      "accountId": "prod",
+      "accountName": "本番アカウント",
+      "awsRegion": "ap-northeast-1",
+      "accessKeyId": "AKIA...",
+      "secretAccessKey": "..."
+    },
+    {
+      "accountId": "rolesanywhere",
+      "accountName": "Roles Anywhereアカウント",
+      "awsRegion": "ap-northeast-1",
+      "credentialProfile": "rolesanywhere"
     }
   ],
   "ecsItems": [
@@ -74,6 +90,8 @@ make setup
 `awsAccounts` は必須です。各アカウントには `accountId` と `awsRegion` を指定してください。
 各 `ecsItems` / `rdsItems` には `accountId` を指定してください。
 `credentialProfile` を指定したアカウントはAWSプロファイルを使用します。未指定のアカウントは実行環境のAWS認証情報を使用します。
+`accessKeyId` / `secretAccessKey` を指定すると静的認証情報を使用します。一時認証情報の場合は `sessionToken` も指定できます。
+`aws_signing_helper credential-process ...` などの `credential_process` は、AWSプロファイル側に設定して `credentialProfile` から参照してください。`config.json` で直接コマンド文字列を指定することはできません。
 
 `groupName` はマニュアルモードで起動する対象を選択するためのグループです。各 `ecsItems` / `rdsItems` に必ず指定してください。マニュアルモードの起動申請では、グループごとに起動する/起動しないを選択できます。
 

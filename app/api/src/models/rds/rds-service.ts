@@ -1,4 +1,4 @@
-import { RDSClient, StartDBClusterCommand, StopDBClusterCommand, DescribeDBClustersCommand, DescribeDBInstancesCommand } from '@aws-sdk/client-rds'
+import { RDSClient, StartDBClusterCommand, StopDBClusterCommand, DescribeDBClustersCommand } from '@aws-sdk/client-rds'
 
 export class RdsService {
   private readonly client: RDSClient
@@ -85,10 +85,6 @@ export class RdsService {
 
   async getClusterInfo(clusterName: string): Promise<{
     clusterStatus: string | undefined
-    instances: Array<{
-      instanceName: string
-      status: string | undefined
-    }>
   }> {
     try {
       const clusterCommand = new DescribeDBClustersCommand({
@@ -102,35 +98,8 @@ export class RdsService {
         throw new Error(`RDS cluster ${clusterName} not found for account ${this.accountId}`)
       }
 
-      const instanceNames = cluster.DBClusterMembers?.map(member => member.DBInstanceIdentifier ?? '').filter(Boolean) || []
-
-      // 各インスタンスの詳細情報を取得
-      const instances = await Promise.all(
-        instanceNames.map(async (instanceName) => {
-          try {
-            const instanceCommand = new DescribeDBInstancesCommand({
-              DBInstanceIdentifier: instanceName
-            })
-            const instanceResponse = await this.client.send(instanceCommand)
-            const instance = instanceResponse.DBInstances?.[0]
-            
-            return {
-              instanceName,
-              status: instance?.DBInstanceStatus
-            }
-          } catch (error) {
-            console.error(`Failed to get instance [${this.accountId}] ${instanceName} info:`, error)
-            return {
-              instanceName,
-              status: 'unknown'
-            }
-          }
-        })
-      )
-
       return {
-        clusterStatus: cluster.Status,
-        instances
+        clusterStatus: cluster.Status
       }
     } catch (error) {
       console.error(`Failed to get RDS cluster [${this.accountId}] ${clusterName} info:`, error)

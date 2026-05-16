@@ -3,7 +3,7 @@ import { calculateScheduleState } from './schedule-state-calculator'
 import { ManualModeStorage } from '../manual-mode/manual-mode-storage'
 
 export class Scheduler {
-  private readonly scheduleActions: ScheduleAction[]
+  private scheduleActions: ScheduleAction[]
   private readonly manualModeStorage: ManualModeStorage
   private intervalId: NodeJS.Timeout | null = null
   private lastExecutionTime: Date | null = null
@@ -42,6 +42,10 @@ export class Scheduler {
       this.intervalId = null
       console.log('Internal scheduler stopped')
     }
+  }
+
+  setScheduleActions(scheduleActions: ScheduleAction[]): void {
+    this.scheduleActions = scheduleActions
   }
 
   async update(now: Date): Promise<void> {

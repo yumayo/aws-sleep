@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { ConfigEditor } from '../components/config-editor'
+import { fetchWithCsrf } from '../api-client'
 
 type ScheduleState = 'active' | 'stop'
 
@@ -17,18 +19,12 @@ interface EcsService {
   scheduleState: ScheduleState
 }
 
-interface RdsInstance {
-  instanceName: string
-  status: string
-}
-
 interface RdsCluster {
   accountId: string
   accountName: string
   groupName: string
   clusterName: string
   clusterStatus: string
-  instances: RdsInstance[]
   startDate: string
   stopDate: string
   scheduleState: ScheduleState
@@ -221,7 +217,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       setOperationLoading(true)
       setError(null)
 
-      const response = await fetch('/server-monitoring-api/start-manual-mode', {
+      const response = await fetchWithCsrf('/server-monitoring-api/start-manual-mode', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -257,7 +253,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       setOperationLoading(true)
       setError(null)
 
-      const response = await fetch('/server-monitoring-api/start-manual-mode', {
+      const response = await fetchWithCsrf('/server-monitoring-api/start-manual-mode', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -295,7 +291,7 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
       setOperationLoading(true)
       setError(null)
 
-      const response = await fetch('/server-monitoring-api/cancel-manual-mode', {
+      const response = await fetchWithCsrf('/server-monitoring-api/cancel-manual-mode', {
         method: 'POST'
       })
 
@@ -410,6 +406,8 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
           </p>
         </div>
       </section>
+
+      <ConfigEditor onConfigSaved={fetchStatus} />
 
       <section>
         <div style={{ backgroundColor: '#ffffcc', padding: '10px', margin: '10px 0', border: '2px solid #cccc00', borderRadius: '4px' }}>
@@ -590,7 +588,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                   <th>アカウント</th>
                   <th>グループ</th>
                   <th>クラスター名</th>
-                  <th>インスタンス名</th>
                   <th>状態</th>
                   <th>日</th>
                   <th>月</th>
@@ -607,31 +604,26 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                 </tr>
               </thead>
               <tbody>
-                {rdsClusters.flatMap((cluster, index) => {
-                  return cluster.instances.map((instance, instanceIndex) => {
-                    return (
-                      <tr key={`${index}-${instanceIndex}`}>
-                        <td>{cluster.accountName}</td>
-                        <td>{cluster.groupName}</td>
-                        <td>{cluster.clusterName}</td>
-                        <td>{instance.instanceName}</td>
-                        <td>{instance.status}</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.startDate || '-'}</td>
-                        <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.stopDate || '-'}</td>
-                        <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.scheduleState}</strong></td>
-                        <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#000' }}>{getManualModeStateForGroup(cluster.groupName) || '-'}</strong></td>
-                      </tr>
-                    )
-                  })
-                })}
+                {rdsClusters.map((cluster, index) => (
+                  <tr key={index}>
+                    <td>{cluster.accountName}</td>
+                    <td>{cluster.groupName}</td>
+                    <td>{cluster.clusterName}</td>
+                    <td>{cluster.clusterStatus}</td>
+                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
+                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>✅</td>
+                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
+                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>❌️</td>
+                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.startDate || '-'}</td>
+                    <td style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.stopDate || '-'}</td>
+                    <td><strong style={manualModeStatus?.isActive ? { textDecoration: 'line-through', color: '#000' } : {}}>{cluster.scheduleState}</strong></td>
+                    <td><strong style={{ color: manualModeStatus?.isActive ? '#ff6b6b' : '#000' }}>{getManualModeStateForGroup(cluster.groupName) || '-'}</strong></td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           )}

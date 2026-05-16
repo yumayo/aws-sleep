@@ -15,6 +15,28 @@ export class ConfigStorage {
       throw new Error('Schedule config file not found. Please create data/config.json')
     }
 
+    this.validate(config)
+
+    return config
+  }
+
+  async loadOrDefault(): Promise<Config> {
+    const config = await this.storage.load()
+
+    if (!config) {
+      return {
+        awsAccounts: [],
+        ecsItems: [],
+        rdsItems: []
+      }
+    }
+
+    this.validate(config)
+
+    return config
+  }
+
+  validate(config: Config): void {
     this.validateConfigRoot(config)
     const accountIds = this.validateAwsAccounts(config)
 
@@ -54,8 +76,6 @@ export class ConfigStorage {
         throw new Error('Time format must be HH:MM (e.g., 09:00, 21:30)')
       }
     }
-
-    return config
   }
 
   getAwsAccounts(config: Config): AwsAccountConfig[] {
@@ -86,8 +106,12 @@ export class ConfigStorage {
   }
 
   private validateConfigRoot(config: Config): void {
-    if (!Array.isArray(config.awsAccounts) || config.awsAccounts.length === 0) {
-      throw new Error('Config must have at least one awsAccounts entry')
+    if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+      throw new Error('Config must be an object')
+    }
+
+    if (!Array.isArray(config.awsAccounts)) {
+      throw new Error('Config must have awsAccounts array')
     }
 
     if (!Array.isArray(config.ecsItems)) {
@@ -103,6 +127,14 @@ export class ConfigStorage {
     const accountIds = new Set<string>()
 
     for (const account of config.awsAccounts) {
+      if (typeof account !== 'object' || account === null || Array.isArray(account)) {
+        throw new Error('Each AWS account config must be an object')
+      }
+
+      if ('credentialProcess' in account) {
+        throw new Error('credentialProcess is not supported in config.json. Configure credential_process in an AWS profile and set credentialProfile instead')
+      }
+
       if (!account.accountId || account.accountId.trim() === '') {
         throw new Error('Each AWS account config must have accountId')
       }
@@ -114,6 +146,12 @@ export class ConfigStorage {
 
       if (!account.awsRegion || account.awsRegion.trim() === '') {
         throw new Error(`AWS account ${account.accountId} must have awsRegion`)
+      }
+
+      const hasAccessKeyId = !!account.accessKeyId?.trim()
+      const hasSecretAccessKey = !!account.secretAccessKey?.trim()
+      if (hasAccessKeyId !== hasSecretAccessKey) {
+        throw new Error(`AWS account ${account.accountId} must have both accessKeyId and secretAccessKey`)
       }
     }
 
@@ -140,6 +178,7 @@ export class ConfigStorage {
   }
 
   async save(config: Config): Promise<void> {
+    this.validate(config)
     await this.storage.save(config)
   }
 

@@ -34,6 +34,9 @@ export interface AwsAccountConfig {
   accountName?: string
   awsRegion: string
   credentialProfile?: string
+  accessKeyId?: string
+  secretAccessKey?: string
+  sessionToken?: string
 }
 
 export interface Config {

@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
+import { randomBytes } from 'node:crypto'
 import { UserStorage } from '../models/auth/user-storage.js'
 import { AuthMiddleware } from '../middleware/auth-middleware.js'
 import { JwtUtil, TokenPayload } from '../models/auth/jwt-util.js'
@@ -40,6 +41,7 @@ export class AuthController {
       }
 
       const token = this.jwtUtil.generateToken(tokenPayload)
+      const csrfToken = randomBytes(32).toString('base64url')
       console.log('JWT生成完了:', {
         username,
         tokenPrefix: token.substring(0, 10) + '...',
@@ -54,7 +56,13 @@ export class AuthController {
         path: '/'
       }
 
+      const csrfCookieOptions = {
+        ...cookieOptions,
+        httpOnly: false
+      }
+
       reply.setCookie('auth_token', token, cookieOptions)
+      reply.setCookie('csrf_token', csrfToken, csrfCookieOptions)
       console.log('Cookie設定:', {
         tokenPrefix: token.substring(0, 10) + '...',
         options: cookieOptions,
@@ -77,7 +85,8 @@ export class AuthController {
 
   logout = async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
-      reply.clearCookie('auth_token')
+      reply.clearCookie('auth_token', { path: '/' })
+      reply.clearCookie('csrf_token', { path: '/' })
       return reply.send({ success: true })
     } catch (error) {
       reply.code(500)

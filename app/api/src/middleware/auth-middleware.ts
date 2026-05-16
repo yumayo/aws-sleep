@@ -2,6 +2,8 @@ import { FastifyRequest, FastifyReply } from 'fastify'
 import { AuthUser } from '../types/auth-types.js'
 import { JwtUtil } from '../models/auth/jwt-util.js'
 
+const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+
 declare module 'fastify' {
   interface FastifyRequest {
     user?: AuthUser
@@ -14,8 +16,38 @@ export class AuthMiddleware {
   private readonly MAX_ATTEMPTS = 5
 
   constructor(
-    private jwtUtil: JwtUtil
+    private jwtUtil: JwtUtil,
+    private readonly trustedOrigins: Set<string> = new Set()
   ) {}
+
+  verifyOrigin = async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!unsafeMethods.has(request.method)) {
+      return
+    }
+
+    const origin = request.headers.origin
+    if (!origin || this.isTrustedOrigin(origin, request)) {
+      return
+    }
+
+    reply.code(403)
+    return reply.send({ error: '許可されていないOriginです' })
+  }
+
+  requireCsrf = async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!unsafeMethods.has(request.method) || !request.cookies?.auth_token) {
+      return
+    }
+
+    const cookieToken = request.cookies.csrf_token
+    const headerValue = request.headers['x-csrf-token']
+    const headerToken = Array.isArray(headerValue) ? headerValue[0] : headerValue
+
+    if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+      reply.code(403)
+      return reply.send({ error: 'CSRFトークンが無効です' })
+    }
+  }
 
   authenticate = async (request: FastifyRequest, reply: FastifyReply) => {
     console.log('認証チェック開始:', {
@@ -80,5 +112,26 @@ export class AuthMiddleware {
 
   resetRateLimit(clientIp: string): void {
     this.rateLimitMap.delete(clientIp)
+  }
+
+  private isTrustedOrigin(origin: string, request: FastifyRequest): boolean {
+    if (this.trustedOrigins.has(origin)) {
+      return true
+    }
+
+    try {
+      const originUrl = new URL(origin)
+      const host = request.headers['x-forwarded-host'] ?? request.headers.host
+      const forwardedProto = request.headers['x-forwarded-proto']
+      const protocol = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto
+
+      if (!host || originUrl.host !== host) {
+        return false
+      }
+
+      return !protocol || originUrl.protocol === `${protocol.split(',')[0].trim()}:`
+    } catch {
+      return false
+    }
   }
 }
