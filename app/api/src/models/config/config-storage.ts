@@ -1,29 +1,51 @@
 import { JsonStorage } from '@app/lib'
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto'
 import { AwsAccountConfig, Config, ResourceGroup, ScheduleConfigEcsItem, ScheduleConfigRdsItem } from '../../types/scheduler-types'
 
+const CREDENTIAL_ALGORITHM = 'aes-256-gcm'
+const ENCRYPTION_KEY_ENV_NAME = 'AWS_SLEEP_CONFIG_ENCRYPTION_KEY'
+const CREDENTIAL_FIELDS = ['accessKeyId', 'secretAccessKey', 'sessionToken'] as const
+
+type CredentialField = typeof CREDENTIAL_FIELDS[number]
+
+interface EncryptedCredential {
+  encrypted: true
+  algorithm: typeof CREDENTIAL_ALGORITHM
+  iv: string
+  authTag: string
+  ciphertext: string
+}
+
+type StoredCredential = EncryptedCredential | undefined
+type StoredAwsAccountConfig = Omit<AwsAccountConfig, CredentialField> & Partial<Record<CredentialField, StoredCredential>>
+type StoredConfig = Omit<Config, 'awsAccounts'> & {
+  awsAccounts: StoredAwsAccountConfig[]
+}
+
 export class ConfigStorage {
-  private readonly storage: JsonStorage<Config>
+  private readonly storage: JsonStorage<StoredConfig>
 
   constructor(dataDir: string = './data') {
-    this.storage = new JsonStorage<Config>('config.json', dataDir)
+    this.storage = new JsonStorage<StoredConfig>('config.json', dataDir)
   }
 
   async load(): Promise<Config> {
-    const config = await this.storage.load()
+    const storedConfig = await this.storage.load()
 
-    if (!config) {
+    if (!storedConfig) {
       throw new Error('Schedule config file not found. Please create data/config.json')
     }
 
+    const config = this.decryptConfig(storedConfig)
     this.validate(config)
 
     return config
   }
 
   async loadOrDefault(): Promise<Config> {
-    const config = await this.storage.load()
+    const storedConfig = await this.storage.load()
 
-    if (!config) {
+    if (!storedConfig) {
       return {
         awsAccounts: [],
         ecsItems: [],
@@ -31,6 +53,7 @@ export class ConfigStorage {
       }
     }
 
+    const config = this.decryptConfig(storedConfig)
     this.validate(config)
 
     return config
@@ -179,7 +202,7 @@ export class ConfigStorage {
 
   async save(config: Config): Promise<void> {
     this.validate(config)
-    await this.storage.save(config)
+    await this.storage.save(this.encryptConfig(config))
   }
 
   async exists(): Promise<boolean> {
@@ -192,5 +215,112 @@ export class ConfigStorage {
       this.getItemAccountId(item) === accountId && item.clusterName === clusterName && item.serviceName === serviceName
     )
     return ecsItem?.desiredCount ?? null
+  }
+
+  private encryptConfig(config: Config): StoredConfig {
+    return {
+      ...config,
+      awsAccounts: config.awsAccounts.map(account => {
+        const storedAccount: StoredAwsAccountConfig = {
+          accountId: account.accountId,
+          accountName: account.accountName,
+          awsRegion: account.awsRegion,
+          credentialProfile: account.credentialProfile
+        }
+
+        for (const field of CREDENTIAL_FIELDS) {
+          const value = account[field]
+          if (value) {
+            storedAccount[field] = this.encryptCredential(value)
+          }
+        }
+
+        return storedAccount
+      })
+    }
+  }
+
+  private decryptConfig(storedConfig: StoredConfig): Config {
+    if (typeof storedConfig !== 'object' || storedConfig === null || Array.isArray(storedConfig) || !Array.isArray(storedConfig.awsAccounts)) {
+      return storedConfig as Config
+    }
+
+    return {
+      ...storedConfig,
+      awsAccounts: storedConfig.awsAccounts.map(storedAccount => {
+        if (typeof storedAccount !== 'object' || storedAccount === null || Array.isArray(storedAccount)) {
+          return storedAccount as AwsAccountConfig
+        }
+
+        const account = { ...storedAccount } as unknown as AwsAccountConfig
+
+        for (const field of CREDENTIAL_FIELDS) {
+          const value = storedAccount[field]
+          if (value !== undefined) {
+            account[field] = this.decryptCredential(value, field)
+          }
+        }
+
+        return account
+      })
+    }
+  }
+
+  private encryptCredential(value: string): EncryptedCredential {
+    const iv = randomBytes(12)
+    const cipher = createCipheriv(CREDENTIAL_ALGORITHM, this.getEncryptionKey(), iv)
+    const ciphertext = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()])
+
+    return {
+      encrypted: true,
+      algorithm: CREDENTIAL_ALGORITHM,
+      iv: iv.toString('base64'),
+      authTag: cipher.getAuthTag().toString('base64'),
+      ciphertext: ciphertext.toString('base64')
+    }
+  }
+
+  private decryptCredential(value: StoredCredential, field: CredentialField): string {
+    if (!this.isEncryptedCredential(value)) {
+      throw new Error(`AWS credential field ${field} must be encrypted in config.json`)
+    }
+
+    const decipher = createDecipheriv(CREDENTIAL_ALGORITHM, this.getEncryptionKey(), Buffer.from(value.iv, 'base64'))
+    decipher.setAuthTag(Buffer.from(value.authTag, 'base64'))
+
+    try {
+      return Buffer.concat([
+        decipher.update(Buffer.from(value.ciphertext, 'base64')),
+        decipher.final()
+      ]).toString('utf8')
+    } catch {
+      throw new Error(`Failed to decrypt AWS credential field ${field}`)
+    }
+  }
+
+  private isEncryptedCredential(value: unknown): value is EncryptedCredential {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      return false
+    }
+
+    const credential = value as Record<string, unknown>
+    return credential.encrypted === true &&
+      credential.algorithm === CREDENTIAL_ALGORITHM &&
+      typeof credential.iv === 'string' &&
+      typeof credential.authTag === 'string' &&
+      typeof credential.ciphertext === 'string'
+  }
+
+  private getEncryptionKey(): Buffer {
+    const secret = process.env[ENCRYPTION_KEY_ENV_NAME]
+    if (!secret) {
+      throw new Error(`${ENCRYPTION_KEY_ENV_NAME} environment variable is required to encrypt AWS credentials`)
+    }
+
+    if (secret.length < 32) {
+      throw new Error(`${ENCRYPTION_KEY_ENV_NAME} must be at least 32 characters`)
+    }
+
+    return createHash('sha256').update(secret).digest()
   }
 }

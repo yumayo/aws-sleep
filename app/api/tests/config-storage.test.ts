@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'fs/promises'
 import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -6,6 +6,7 @@ import { ConfigStorage } from '../src/models/config/config-storage'
 import { Config } from '../src/types/scheduler-types'
 
 const tempDirs: string[] = []
+const originalEncryptionKey = process.env.AWS_SLEEP_CONFIG_ENCRYPTION_KEY
 
 const createTempDir = async (): Promise<string> => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'aws-sleep-config-test-'))
@@ -16,6 +17,10 @@ const createTempDir = async (): Promise<string> => {
 const writeConfig = async (dataDir: string, config: unknown): Promise<void> => {
   await mkdir(dataDir, { recursive: true })
   await writeFile(path.join(dataDir, 'config.json'), JSON.stringify(config), 'utf-8')
+}
+
+const setEncryptionKey = (): void => {
+  process.env.AWS_SLEEP_CONFIG_ENCRYPTION_KEY = 'test-encryption-key-with-enough-entropy'
 }
 
 const validConfig = (): Config => ({
@@ -51,6 +56,11 @@ const validConfig = (): Config => ({
 describe('ConfigStorage', () => {
   afterEach(async () => {
     await Promise.all(tempDirs.splice(0).map(tempDir => rm(tempDir, { recursive: true, force: true })))
+    if (originalEncryptionKey === undefined) {
+      delete process.env.AWS_SLEEP_CONFIG_ENCRYPTION_KEY
+    } else {
+      process.env.AWS_SLEEP_CONFIG_ENCRYPTION_KEY = originalEncryptionKey
+    }
   })
 
   it('loads explicit account and group assignments', async () => {
@@ -150,8 +160,9 @@ describe('ConfigStorage', () => {
     await expect(storage.load()).rejects.toThrow('RDS config must have groupName')
   })
 
-  it('loads account credential settings', async () => {
+  it('encrypts account credential settings at rest', async () => {
     const dataDir = await createTempDir()
+    setEncryptionKey()
     const config: Config = {
       ...validConfig(),
       awsAccounts: [
@@ -166,11 +177,50 @@ describe('ConfigStorage', () => {
         }
       ]
     }
-    await writeConfig(dataDir, config)
+
+    const storage = new ConfigStorage(dataDir)
+    await storage.save(config)
+    const storedConfigText = await readFile(path.join(dataDir, 'config.json'), 'utf-8')
+    const storedConfig = JSON.parse(storedConfigText) as {
+      awsAccounts: Array<Record<string, unknown>>
+    }
+
+    expect(storedConfigText).not.toContain('AKIAEXAMPLE')
+    expect(storedConfigText).not.toContain('"secret"')
+    expect(storedConfigText).not.toContain('"token"')
+    expect(storedConfig.awsAccounts[0].accessKeyId).toMatchObject({
+      encrypted: true,
+      algorithm: 'aes-256-gcm'
+    })
+    expect(storedConfig.awsAccounts[0].secretAccessKey).toMatchObject({
+      encrypted: true,
+      algorithm: 'aes-256-gcm'
+    })
+    expect(storedConfig.awsAccounts[0].sessionToken).toMatchObject({
+      encrypted: true,
+      algorithm: 'aes-256-gcm'
+    })
+    await expect(storage.load()).resolves.toEqual(config)
+  })
+
+  it('rejects plaintext credential settings in stored config', async () => {
+    const dataDir = await createTempDir()
+    setEncryptionKey()
+    await writeConfig(dataDir, {
+      ...validConfig(),
+      awsAccounts: [
+        {
+          accountId: 'dev',
+          awsRegion: 'ap-northeast-1',
+          accessKeyId: 'AKIAEXAMPLE',
+          secretAccessKey: 'secret'
+        }
+      ]
+    })
 
     const storage = new ConfigStorage(dataDir)
 
-    await expect(storage.load()).resolves.toEqual(config)
+    await expect(storage.load()).rejects.toThrow('AWS credential field accessKeyId must be encrypted in config.json')
   })
 
   it('rejects credentialProcess in app config', async () => {
@@ -193,7 +243,9 @@ describe('ConfigStorage', () => {
 
   it('rejects account with only one static credential field', async () => {
     const dataDir = await createTempDir()
-    await writeConfig(dataDir, {
+    const storage = new ConfigStorage(dataDir)
+
+    await expect(storage.save({
       ...validConfig(),
       awsAccounts: [
         {
@@ -202,10 +254,6 @@ describe('ConfigStorage', () => {
           accessKeyId: 'AKIAEXAMPLE'
         }
       ]
-    })
-
-    const storage = new ConfigStorage(dataDir)
-
-    await expect(storage.load()).rejects.toThrow('AWS account dev must have both accessKeyId and secretAccessKey')
+    })).rejects.toThrow('AWS account dev must have both accessKeyId and secretAccessKey')
   })
 })
