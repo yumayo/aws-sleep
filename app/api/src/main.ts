@@ -407,7 +407,7 @@ fastify.post('/start-manual-mode', { preHandler: [authMiddleware.authenticate, a
 })
 
 // マニュアルモード解除
-fastify.post('/cancel-manual-mode', { preHandler: [authMiddleware.authenticate, authMiddleware.requireAdmin, authMiddleware.requireCsrf] }, async (_request, reply) => {
+fastify.post('/cancel-manual-mode', { preHandler: [authMiddleware.authenticate, authMiddleware.requireCsrf] }, async (_request, reply) => {
   try {
     const result = await manualModeController.cancelManualMode()
 

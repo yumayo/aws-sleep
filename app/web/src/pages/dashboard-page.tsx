@@ -590,13 +590,11 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
               サーバーを停止する
             </button>
           </div>
-          {isAdmin && (
-            <div>
-              <button onClick={cancelManualMode} disabled={operationLoading || !manualModeStatus?.isActive}>
-                マニュアルモードを解除する
-              </button>
-            </div>
-          )}
+          <div>
+            <button onClick={cancelManualMode} disabled={operationLoading || !manualModeStatus?.isActive}>
+              マニュアルモードを解除する
+            </button>
+          </div>
         </div>
       </section>
 
