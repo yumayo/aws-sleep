@@ -40,11 +40,11 @@ export class AwsDiscoveryService {
       throw new Error('Failed to discover AWS account ID')
     }
 
-    let accountName = identity.Account
+    let accountName = account.accountName?.trim() ?? ''
     try {
       const iamClient = AwsClientFactory.createIamClient({ ...account, accountId: identity.Account })
       const aliases = await iamClient.send(new ListAccountAliasesCommand({}))
-      accountName = aliases.AccountAliases?.[0] ?? identity.Account
+      accountName = aliases.AccountAliases?.[0]?.trim() || accountName
     } catch (error) {
       console.warn(`Failed to discover AWS account alias for ${identity.Account}:`, error)
     }

@@ -91,7 +91,7 @@ const getRdsService = (accountId: string): RdsService => {
 }
 const getAccountName = (accountId: string): string => {
   const account = config.awsAccounts.find(account => account.accountId === accountId)
-  return account?.accountName ?? accountId
+  return account?.accountName?.trim() || 'AWSアカウント名未設定'
 }
 const manualModeStorage = new ManualModeStorage()
 const manualModeController = new ManualModeController(manualModeStorage)

@@ -210,6 +210,26 @@ function MaskedCredentialInput({ value, placeholder, onValueChange }: MaskedCred
   )
 }
 
+function ReadOnlyValue({ value }: { value: string }) {
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        minWidth: '10rem',
+        padding: '2px 6px',
+        backgroundColor: '#f2f2f2',
+        border: '1px solid #ccc',
+        borderRadius: '3px',
+        color: '#555',
+        fontFamily: 'monospace',
+        whiteSpace: 'nowrap'
+      }}
+    >
+      {value || '-'}
+    </span>
+  )
+}
+
 export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
   const [config, setConfig] = useState<Config>(emptyConfig)
   const [isOpen, setIsOpen] = useState(false)
@@ -303,9 +323,16 @@ export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
     setIsOpen(true)
   }
 
+  const getAccountDisplayName = (account: AwsAccountConfig, index?: number): string => {
+    const accountName = account.accountName?.trim()
+    return accountName || `アカウント ${index !== undefined ? index + 1 : ''}`.trim()
+  }
+
+  const getDefaultGroupName = (account?: AwsAccountConfig): string => account?.accountName?.trim() || 'default'
+
   const removeAccount = (index: number) => {
     const account = config.awsAccounts[index]
-    if (account?.accountId && !confirm(`${account.accountId} の設定と関連リソース設定を削除しますか？`)) {
+    if (account?.accountId && !confirm(`${getAccountDisplayName(account, index)} の設定と関連リソース設定を削除しますか？`)) {
       return
     }
 
@@ -338,15 +365,13 @@ export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
           ? prev.rdsItems.map(item => item.accountId === previousAccountId ? { ...item, accountId: data.account.accountId } : item)
           : prev.rdsItems
       }))
-      setMessage(`AWSアカウント情報を取得しました: ${data.account.accountId}`)
+      setMessage(`AWSアカウント情報を取得しました: ${getAccountDisplayName({ ...config.awsAccounts[index], accountName: data.account.accountName }, index)}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
   }
-
-  const getDefaultGroupName = (account: AwsAccountConfig): string => account.accountName || account.accountId || 'default'
 
   const importEcsServices = async (index: number) => {
     try {
@@ -434,40 +459,6 @@ export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
     }))
   }
 
-  const addEcsItem = () => {
-    setConfig(prev => ({
-      ...prev,
-      ecsItems: [
-        ...prev.ecsItems,
-        {
-          accountId: prev.awsAccounts[0]?.accountId ?? '',
-          groupName: 'default',
-          clusterName: '',
-          serviceName: '',
-          desiredCount: 1,
-          startDate: '9:00',
-          stopDate: '21:00'
-        }
-      ]
-    }))
-  }
-
-  const addRdsItem = () => {
-    setConfig(prev => ({
-      ...prev,
-      rdsItems: [
-        ...prev.rdsItems,
-        {
-          accountId: prev.awsAccounts[0]?.accountId ?? '',
-          groupName: 'default',
-          clusterName: '',
-          startDate: '8:40',
-          stopDate: '21:00'
-        }
-      ]
-    }))
-  }
-
   const removeEcsItem = (index: number) => {
     setConfig(prev => ({
       ...prev,
@@ -516,7 +507,6 @@ export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
             <h3>AWSアカウント</h3>
             {config.awsAccounts.map((account, index) => (
               <fieldset key={index} style={{ marginBottom: '12px' }}>
-                <legend>{account.accountName || account.accountId || `アカウント ${index + 1}`}</legend>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '8px' }}>
                   <label>
                     AWSアカウントID
@@ -597,16 +587,11 @@ export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
                 {config.ecsItems.map((item, index) => (
                   <tr key={index}>
                     <td>
-                      <select value={item.accountId} onChange={(e) => updateEcsItem(index, { accountId: e.target.value })}>
-                        <option value="">選択</option>
-                        {config.awsAccounts.map((account, accountIndex) => (
-                          <option key={`${account.accountId}-${accountIndex}`} value={account.accountId}>{account.accountName || account.accountId}</option>
-                        ))}
-                      </select>
+                      <ReadOnlyValue value={item.accountId} />
                     </td>
                     <td><input value={item.groupName} onChange={(e) => updateEcsItem(index, { groupName: e.target.value })} /></td>
-                    <td><input value={item.clusterName} onChange={(e) => updateEcsItem(index, { clusterName: e.target.value })} /></td>
-                    <td><input value={item.serviceName} onChange={(e) => updateEcsItem(index, { serviceName: e.target.value })} /></td>
+                    <td><ReadOnlyValue value={item.clusterName} /></td>
+                    <td><ReadOnlyValue value={item.serviceName} /></td>
                     <td><input type="number" min={0} value={item.desiredCount} onChange={(e) => updateEcsItem(index, { desiredCount: Number(e.target.value) })} style={{ width: '5rem' }} /></td>
                     <td><input value={item.startDate} onChange={(e) => updateEcsItem(index, { startDate: e.target.value })} /></td>
                     <td><input value={item.stopDate} onChange={(e) => updateEcsItem(index, { stopDate: e.target.value })} /></td>
@@ -615,7 +600,6 @@ export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
                 ))}
               </tbody>
             </table>
-            <button onClick={addEcsItem} disabled={loading} style={{ marginTop: '8px' }}>ECSサービスを追加</button>
 
             <h3>RDSクラスター</h3>
             <table border={1}>
@@ -633,15 +617,10 @@ export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
                 {config.rdsItems.map((item, index) => (
                   <tr key={index}>
                     <td>
-                      <select value={item.accountId} onChange={(e) => updateRdsItem(index, { accountId: e.target.value })}>
-                        <option value="">選択</option>
-                        {config.awsAccounts.map((account, accountIndex) => (
-                          <option key={`${account.accountId}-${accountIndex}`} value={account.accountId}>{account.accountName || account.accountId}</option>
-                        ))}
-                      </select>
+                      <ReadOnlyValue value={item.accountId} />
                     </td>
                     <td><input value={item.groupName} onChange={(e) => updateRdsItem(index, { groupName: e.target.value })} /></td>
-                    <td><input value={item.clusterName} onChange={(e) => updateRdsItem(index, { clusterName: e.target.value })} /></td>
+                    <td><ReadOnlyValue value={item.clusterName} /></td>
                     <td><input value={item.startDate} onChange={(e) => updateRdsItem(index, { startDate: e.target.value })} /></td>
                     <td><input value={item.stopDate} onChange={(e) => updateRdsItem(index, { stopDate: e.target.value })} /></td>
                     <td><button onClick={() => removeRdsItem(index)} disabled={loading}>削除</button></td>
@@ -649,7 +628,6 @@ export function ConfigEditor({ onConfigSaved }: ConfigEditorProps) {
                 ))}
               </tbody>
             </table>
-            <button onClick={addRdsItem} disabled={loading} style={{ marginTop: '8px' }}>RDSクラスターを追加</button>
           </div>
         )}
       </div>

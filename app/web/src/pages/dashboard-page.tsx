@@ -44,7 +44,6 @@ interface RdsStatusResponse {
 interface ResourceStatus {
   resourceType: 'ECS' | 'RDS'
   accountId: string
-  accountName: string
   groupName: string
   clusterName: string
   serviceName: string
@@ -363,7 +362,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     ...ecsServices.map<ResourceStatus>(service => ({
       resourceType: 'ECS',
       accountId: service.accountId,
-      accountName: service.accountName,
       groupName: service.groupName,
       clusterName: service.clusterName,
       serviceName: service.serviceName,
@@ -378,7 +376,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
     ...rdsClusters.map<ResourceStatus>(cluster => ({
       resourceType: 'RDS',
       accountId: cluster.accountId,
-      accountName: cluster.accountName,
       groupName: cluster.groupName,
       clusterName: cluster.clusterName,
       serviceName: '',
@@ -393,7 +390,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
   ].sort((a, b) => (
     a.groupName.localeCompare(b.groupName)
     || a.resourceType.localeCompare(b.resourceType)
-    || a.accountName.localeCompare(b.accountName)
     || a.clusterName.localeCompare(b.clusterName)
     || a.serviceName.localeCompare(b.serviceName)
   ))
@@ -616,7 +612,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                 <table border={1}>
                   <thead>
                     <tr>
-                      <th>アカウント</th>
                       <th>種別</th>
                       <th>クラスター名</th>
                       <th>サービス名</th>
@@ -641,7 +636,6 @@ export function DashboardPage({ user, logout }: DashboardPageProps) {
                   <tbody>
                     {group.resources.map(resource => (
                       <tr key={`${resource.resourceType}/${resource.accountId}/${resource.groupName}/${resource.clusterName}/${resource.serviceName}`}>
-                        <td>{resource.accountName}</td>
                         <td>{resource.resourceType}</td>
                         <td>{resource.clusterName}</td>
                         <td>{resource.serviceName}</td>
