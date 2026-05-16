@@ -1,7 +1,7 @@
 
 ![alt-text](resources/login-page.png)
 
-![alt-text](resources/dashboard.png)
+![alt-text](resources/dashboard2.png)
 
 # 初回セットアップ
 
